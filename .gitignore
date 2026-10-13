@@ -1,0 +1,87 @@
+# Build/staging trees: generated firmware overlays, headers, fonts, APKs,
+# board projects, downloaded tools, test fixtures/results and device captures.
+build/
+/output/
+/tmp/
+
+# Native compiler and linker outputs.
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.elf
+*.map
+*.d
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+
+# Android packaging, Gradle and local SDK configuration/signing keys.
+*.class
+*.dex
+*.apk
+*.aab
+*.ap_
+*.keystore
+*.jks
+.gradle/
+.cxx/
+.externalNativeBuild/
+local.properties
+/android/sdk/
+/android/ndk/
+
+# ESP-IDF / PlatformIO generated state and downloaded components.
+.pio/
+.platformio/
+managed_components/
+sdkconfig
+sdkconfig.old
+# Keep sdkconfig.defaults, dependencies.lock and sources.lock.json: build inputs.
+
+# CMake state for builds outside the normal build/ tree.
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
+.ninja_deps
+.ninja_log
+build.ninja
+compile_commands.json
+
+# Python environments, bytecode and tool caches.
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+
+# Local repository search index.
+.zzg/
+
+# Logs and editor/OS temporary files.
+*.log
+*.swp
+*.swo
+*~
+.#*
+.DS_Store
+._*
+Thumbs.db
+.idea/
+
+# Required artwork, source fonts, sample assets and lockfiles stay versionable.
+# Do not blanket-ignore image, font, archive, binary-data or generated C headers:
+# reproducible outputs belong under build/; some such files are source inputs.
