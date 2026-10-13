@@ -20,6 +20,29 @@ Upstream sources and notices are preserved. See [credits and licenses](LICENSING
 for DSP, font, sample and platform dependencies. This project is independent of
 M-VAVE and the upstream firmware authors; no endorsement is implied.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><a href="docs/screenshots/01-sloop-native.png"><img src="docs/screenshots/01-sloop-native.png" width="190" alt="Native display" /></a><br /><sub>Native display</sub></td>
+    <td align="center"><a href="docs/screenshots/02-sound-editor.png"><img src="docs/screenshots/02-sound-editor.png" width="190" alt="Sound editor" /></a><br /><sub>Sound editor</sub></td>
+    <td align="center"><a href="docs/screenshots/03-piano-roll.png"><img src="docs/screenshots/03-piano-roll.png" width="190" alt="Piano roll" /></a><br /><sub>Piano roll</sub></td>
+    <td align="center"><a href="docs/screenshots/04-chord-editor.png"><img src="docs/screenshots/04-chord-editor.png" width="190" alt="Chord editor" /></a><br /><sub>Chord editor</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="docs/screenshots/05-drum-grid.png"><img src="docs/screenshots/05-drum-grid.png" width="190" alt="Drum sequencer" /></a><br /><sub>Drum sequencer</sub></td>
+    <td align="center"><a href="docs/screenshots/06-drum-sound.png"><img src="docs/screenshots/06-drum-sound.png" width="190" alt="Drum sound editor" /></a><br /><sub>Drum sound editor</sub></td>
+    <td align="center"><a href="docs/screenshots/07-mixer.png"><img src="docs/screenshots/07-mixer.png" width="190" alt="Mixer" /></a><br /><sub>Mixer</sub></td>
+    <td align="center"><a href="docs/screenshots/08-performance.png"><img src="docs/screenshots/08-performance.png" width="190" alt="Performance pads" /></a><br /><sub>Performance pads</sub></td>
+  </tr>
+</table>
+
+<a href="docs/screenshots/09-landscape.png"><img src="docs/screenshots/09-landscape.png" width="800" alt="Landscape: SLOOP native display, mixer and keyboard" /></a>
+
+| SLOOP | FM1 MOVE | Felucca | sloopDX |
+| --- | --- | --- | --- |
+| <a href="docs/screenshots/10-firmware-sloop.png"><img src="docs/screenshots/10-firmware-sloop.png" width="190" alt="SLOOP running a demo loop" /></a> | <a href="docs/screenshots/11-firmware-move.png"><img src="docs/screenshots/11-firmware-move.png" width="190" alt="FM1 MOVE running a demo loop" /></a> | <a href="docs/screenshots/12-firmware-felucca.png"><img src="docs/screenshots/12-firmware-felucca.png" width="190" alt="Felucca running a demo loop" /></a> | <a href="docs/screenshots/13-firmware-sloopdx.png"><img src="docs/screenshots/13-firmware-sloopdx.png" width="190" alt="sloopDX running a demo loop" /></a> |
+
 ## Build
 
 Python 3.10+ is required. Both build scripts print OS-specific installation
