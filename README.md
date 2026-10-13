@@ -1,7 +1,7 @@
 # FM1 Studio
 
-Play **SLOOP, FM1 MOVE, Felucca and sloopDX** on Android, with
-native firmware displays, touch controls, a piano roll, sound editors and MIDI.
+Run FM-1 firmwares **SLOOP, FM1 MOVE, Felucca and sloopDX** on Android, with
+native firmware displays, touch controls, a piano roll, sound editors.
 
 ## Credits
 
