@@ -153,6 +153,7 @@ void sloop_editor_snapshot(struct sloop_editor *out){
     J("],\"punchNames\":[");for(unsigned i=0;i<PUNCH_NFX;i++)J("%s\"%s\"",i?",":"",PUNCH_NAME[i]);
     J("],\"catalogue\":[");for(unsigned i=0;i<DX_NVOICES;i++){J("%s{\"engine\":0,\"preset\":%u,\"name\":\"",i?",":"",i);for(const char *p=dx_names[i];*p;p++)if(*p!='"'&&*p!='\\')J("%c",*p);J("\"}");}
     J("],\"ids\":{\"root\":%u,\"scale\":%u,\"length\":%u,\"roll\":%u,\"drumChannel\":%u,\"sync\":%u},\"samples\":[],\"midiLearn\":[],\"lockParameters\":[]",P_ROOT,P_SCALE,P_SLEN,G_ROLL,G_DRCH,G_SYNC);
+    J(",\"keyNotes\":[");for(unsigned k=0;k<27;k++){unsigned note=kb_map(TSEL,k);J("%s%d",k?",":"",note<128?(int)note:-1);}J("]");
 #undef J
 }
 #include "files.c"

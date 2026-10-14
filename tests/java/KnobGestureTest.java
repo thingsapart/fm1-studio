@@ -12,13 +12,13 @@ public class KnobGestureTest {
         g.begin(40,40,400);check(g.move(20,40,450));check(g.delta(20,40)==-20);g.cancel();
         g.begin(40,40,500);check(g.move(40,70,550));check(g.delta(40,70)==-30);g.cancel();
         // Small jitter neither changes a parameter nor stops the stationary hold.
-        g.begin(40,40,1000);check(!g.move(43,44,1200));check(!g.hold(1749));check(g.hold(1750));check(g.isScrolling());check(!g.capturesDrag());check(!g.move(40,90,1800));check(g.end(40,90,1900)==KnobGesture.NONE);
+        g.begin(40,40,1000);check(!g.move(43,44,1200));check(!g.hold(1299));check(g.hold(1300));check(g.isScrolling());check(!g.capturesDrag());check(!g.move(40,90,1800));check(g.end(40,90,1900)==KnobGesture.NONE);
         // A late first move scrolls even if the timer callback was delayed.
-        g.begin(40,40,2000);check(!g.move(40,90,2750));check(g.isScrolling());g.cancel();
+        g.begin(40,40,2000);check(!g.move(40,90,2300));check(g.isScrolling());g.cancel();
         // Once tuning begins, pausing never switches the same gesture to scrolling.
         g.begin(40,40,3000);check(g.move(60,40,3050));check(!g.hold(4000));check(g.move(60,80,4050));check(g.delta(60,80)==20);check(g.end(60,80,4100)==KnobGesture.DRAG);
         // A hold alone does not open the value editor or change the value.
-        g.begin(40,40,5000);check(g.hold(5750));check(g.end(40,40,5800)==KnobGesture.NONE);
+        g.begin(40,40,5000);check(g.hold(5300));check(g.end(40,40,5800)==KnobGesture.NONE);
         g.begin(40,40,6000);check(g.end(40,40,6800)==KnobGesture.NONE);
         // Double-tap exact entry and quick second-press adjustment remain distinct.
         g.begin(40,40,7000);check(g.end(40,40,7050)==KnobGesture.TAP);
@@ -32,6 +32,6 @@ public class KnobGestureTest {
         // Readout taps can still open exact entry without grabbing scroll gestures.
         g.begin(40,100,12000,false);check(g.end(40,100,12050)==KnobGesture.TAP);
         g.begin(40,100,12100,false);check(g.end(40,100,12150)==KnobGesture.DOUBLE_TAP);
-        System.out.println("PASS default knob tuning, 750 ms scroll hold, jitter, gesture locking, double-taps and cancellation");
+        System.out.println("PASS default knob tuning, 300 ms scroll hold, jitter, gesture locking, double-taps and cancellation");
     }
 }

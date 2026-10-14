@@ -52,6 +52,13 @@ allows combining the assets with the GPL code subject to the assets' terms.
 Those atlases are not covered by the code's GPL license. Current Felucca's
 Fukiai-based icons have the MIT terms listed above.
 
+## Controller protocol
+
+JP-1 experimental Bluetooth RGB encoding is adapted from the
+[padmon / JP-Mini protocol by Flo](https://tangled.org/faz.ms/padmon/),
+Copyright (c) 2026 Flo, under the MIT License. The full notice is included in
+[LICENSES/MIT-padmon.txt](LICENSES/MIT-padmon.txt) and Android packages.
+
 ## Android runtime and project assets
 
 The statically linked Android NDK C++ runtime carries **Apache-2.0 with LLVM

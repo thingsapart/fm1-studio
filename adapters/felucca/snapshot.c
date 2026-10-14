@@ -21,6 +21,7 @@ static void studio_json(struct sloop_editor *out){
     count=0;for(unsigned i=0;i<P_COUNT;i++)if(motion_param(i)){const param_desc_t *d=track_desc(TSEL,i);if(d&&d->max>d->min){J("%s{\"id\":%u,\"label\":",count++?",":"",i);Q(d->label);J(",\"min\":%d,\"max\":%d,\"value\":%d}",d->min,d->max,TSEL->p[i]);}}J("]");
     J(",\"paletteMax\":%u",NPALETTES-1);
     if(n>=cap){out->version=0;b[0]=0;}
+    J(",\"keyNotes\":[");for(unsigned k=0;k<27;k++){unsigned note=kb_map(TSEL,k);J("%s%d",k?",":"",note<128?(int)note:-1);}J("]");
 #undef J
 #undef Q
 }

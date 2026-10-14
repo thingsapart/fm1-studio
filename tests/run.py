@@ -56,6 +56,7 @@ import json
 for firmware in FIRMWARES:
     snapshot=json.loads((out/('studio-'+firmware.id+'.json')).read_text())
     assert snapshot['version']==1 and snapshot['bpm']==137 and len(snapshot['detail'])==(128 if firmware.id=='sloopdx' else 64)
+    assert len(snapshot['keyNotes'])==27 and all(-1<=n<=127 for n in snapshot['keyNotes'])
     assert len(snapshot['lanes'])>=firmware.studio.drum_lanes and len(snapshot['tracks'])>=len(firmware.studio.tracks)
     assert all('params' in group for group in snapshot['groups'])
     chord=json.loads((out/('chord-'+firmware.id+'.json')).read_text())
@@ -83,6 +84,6 @@ for bad in (
     except ValueError:pass
 print('PASS shared Java/C descriptors and invalid-mapping rejection')
 
-run(['javac','--release','8','-d',out/'java-classes',*[PROJECT/'android/java/org/fm1/wrapper'/name for name in ('MidiFile.java','MidiParser.java','MidiEncoders.java','SampleCodec.java','TrackGeometry.java','ChordNotes.java','ChordPlacement.java','KnobGesture.java','KnobGeometry.java','PianoRollNotes.java','DrumSound.java')],out/'Definitions.java',*sorted((PROJECT/'tests/java').glob('*.java'))])
+run(['javac','--release','8','-d',out/'java-classes',*[PROJECT/'android/java/org/fm1/wrapper'/name for name in ('MidiFile.java','MidiParser.java','MidiEncoders.java','Jp1Controller.java','Jp1Pads.java','Jp1Rgb.java','Jp1Feedback.java','Jp1LedQueue.java','Jp1Status.java','ControllerValue.java','SampleCodec.java','TrackGeometry.java','ChordNotes.java','ChordPlacement.java','KnobGesture.java','KnobGeometry.java','PianoRollNotes.java','DrumSound.java')],out/'Definitions.java',*sorted((PROJECT/'tests/java').glob('*.java'))])
 for test in sorted((PROJECT/'tests/java').glob('*Test.java')):
     run(['java','-cp',out/'java-classes','org.fm1.wrapper.'+test.stem,*([out/'sample-adpcm.bin'] if test.stem=='SampleCodecTest' else [])])

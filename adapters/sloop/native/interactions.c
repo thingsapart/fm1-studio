@@ -167,6 +167,7 @@ static void android_json(char *out,size_t size) {
     J("],\"synthFactory\":[");for(unsigned i=0;i<DS_NKITS;i++)J("%s\"%s\"",i?",":"",DS_KITS[i].name);
     J("],\"userSlot\":%d,\"sustain\":%d,\"bend\":%d,\"division\":%d,\"sounding\":%u,\"dynamics\":%u,\"ids\":{\"root\":%d,\"scale\":%d,\"filter\":%d,\"length\":%d,\"roll\":%d,\"drumChannel\":%d,\"sync\":%d},\"lockParameters\":[",TSEL->user?(int)TSEL->user-1:-1,sus_on[song.sel],TSEL->bend+8192,TSEL->p[P_SDIV],keys_sounding(TSEL),android_dynamics,P_ROOT,P_SCALE,P_TFLT,P_SLEN,G_ROLL,G_DRCH,G_SYNC);
     int c=0;for(unsigned i=0;i<P_COUNT;i++)if(p_lockable(i)){const param_desc_t *d=track_desc(TSEL,i);if(d&&d->max>d->min)J("%s{\"id\":%u,\"label\":\"%s\",\"min\":%d,\"max\":%d,\"value\":%d}",c++?",":"",i,d->label,d->min,d->max,TSEL->p[i]);}J("]");
+    J(",\"keyNotes\":[");for(unsigned k=0;k<27;k++){unsigned note=kb_map(TSEL,k);J("%s%d",k?",":"",note<128?(int)note:-1);}J("]");
 #undef J
 }
 

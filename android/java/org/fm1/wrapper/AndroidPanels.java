@@ -39,11 +39,11 @@ final class AndroidPanels {
 
     void confirm(String title,String message,Runnable run){LinearLayout b=body();TextView text=ui.label(message,14,StudioView.TEXT);text.setSingleLine(false);text.setMaxLines(5);b.addView(text,new LinearLayout.LayoutParams(-1,-2));final Dialog[] d={null};add(b,title,()->{d[0].dismiss();run.run();});add(b,"CANCEL",()->d[0].dismiss());d[0]=sheet(title,b);}
     void choose(String title,String[] names,int current,IntConsumer send){ui.picker(title,names,current,names.length>12,send);}
-    void menu(){if(state()==null)return;Definitions.MenuEntry[] items=ui.definition.menu;String[] entries=new String[items.length];for(int i=0;i<entries.length;i++)entries[i]=items[i].label;
-      choose(Definitions.active.name,entries,-1,n->{String route=items[n].action;switch(route){
+    void menu(){if(state()==null)return;Definitions.MenuEntry[] items=ui.definition.menu;String[] entries=new String[items.length+1];for(int i=0;i<items.length;i++)entries[i]=items[i].label;entries[items.length]="JP-1 PERFORMANCE SCREEN";
+      choose(Definitions.active.name,entries,-1,n->{if(n==items.length){ui.openPage("JP LIVE");return;}String route=items[n].action;switch(route){
         case "new":confirm("NEW PROJECT","Reset all tracks and tempo? Save a project slot first to keep this loop.",()->action(2,0));break;
         case "projects":projects();break;case "clear":clear();break;case "pattern":pattern();break;case "sounds":sounds();break;case "samples":samples();break;case "files":ui.settings();break;case "settings":settings();break;case "keyScale":keyScale();break;
-        case "home":Native.event(Native.EDITOR_HOME,0,0);ui.openPage("PANEL");break;case "pages":ui.chooseGroup();break;case "preset":ui.choosePreset();break;case "fm6":fm6();break;case "dx7":dx7();break;case "drumSynth":synthKits();break;case "catalogue":catalogue();break;case "hardware":ui.openPage("MORE");break;
+        case "home":ui.showHome();break;case "pages":ui.chooseGroup();break;case "preset":ui.choosePreset();break;case "fm6":fm6();break;case "dx7":dx7();break;case "drumSynth":synthKits();break;case "catalogue":catalogue();break;case "hardware":ui.openPage("MORE");break;
       }});
     }
     void chooseOrdered(String component,String title,String[] names,IntConsumer send){

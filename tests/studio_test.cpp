@@ -19,6 +19,15 @@ int main(int argc,char **argv){
         int track=counts[k]-1;f->event(64+SLOOP_SELECT,track,0);f->event(64+SLOOP_MIX,track,87);f->event(64+SLOOP_MUTE,track,1);f->event(64+SLOOP_GLOBAL,0,137);editor->snapshot(state.get());assert(state->selected==track&&state->bpm==137&&state->tracks[track].level==87&&state->tracks[track].mute==1);
         f->event(64+SLOOP_MUTE,track,0);f->event(64+SLOOP_PARAM,state->length_parameter,32);editor->snapshot(state.get());assert(state->length==32);
         int synth=0;for(int i=0;i<counts[k];i++)if(!state->tracks[i].drum){synth=i;break;}
+        if(id!="felucca"){
+            // The snapshot marks armed recording active, so a second REC requests off.
+            f->event(64+SLOOP_RECORD,synth,1);warm(f);editor->snapshot(state.get());
+            std::ofstream(dir+"/jp1-armed-"+id+".json")<<fm1_studio_json(*state);
+            assert((state->recording&(1<<synth))!=0&&std::string(state->extra).find("\"recordState\":1")!=std::string::npos);
+            int toggle=(state->recording&(1<<synth))==0?1:0;
+            f->event(64+SLOOP_RECORD,synth,toggle);warm(f);editor->snapshot(state.get());
+            assert(state->recording==0&&std::string(state->extra).find("\"recordState\":0")!=std::string::npos);
+        }
         f->event(64+SLOOP_SELECT,synth,0);f->event(64+SLOOP_STEP,synth*8192+60,1);editor->snapshot(state.get());assert(state->steps[0][0]==60);
         f->event(64+SLOOP_DETAIL,synth*65536+10,72); // Felucca probability; ignored elsewhere.
         for(int g=0;g<state->group_count;g++)for(int i=0;i<state->groups[g].count;i++){

@@ -4,7 +4,7 @@ package org.fm1.wrapper;
 /** Drag tunes by default; a stationary hold hands the gesture to the scroll container. */
 final class KnobGesture {
     static final int NONE=0,TAP=1,DOUBLE_TAP=2,DRAG=3;
-    static final long SCROLL_HOLD_MS=750;
+    static final long SCROLL_HOLD_MS=300;
     private static final int PENDING=0,ADJUSTING=1,SCROLLING=2,PASSIVE=3;
     final float slop,doubleSlop;
     final long doubleTimeout;
