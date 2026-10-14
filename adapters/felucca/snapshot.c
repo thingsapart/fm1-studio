@@ -35,6 +35,8 @@ static void studio_snapshot(struct sloop_editor *out){
     }
     out->current.page=ui.home?-1:ui.page;str_cpy(out->current.title,ui.home?"HOME":cur_page()->title,sizeof out->current.title);for(unsigned i=0;i<out->group_count;i++)if(out->groups[i].page==out->current.page)out->current=out->groups[i];
     if(ui.home){for(unsigned k=0;k<4;k++){unsigned id=ENGINES[out->engine]->knob[k];const param_desc_t *d=id<P_COUNT?track_desc(TSEL,id):0;if(d&&d->max>d->min)editor_param(&out->current.param[out->current.count++],song.sel*256+id,d,TSEL->p[id]);}}
+    if(out->group_count<SLOOP_EDITOR_GROUPS){struct sloop_group *g=&out->groups[out->group_count++];str_cpy(g->title,"PATTERN",sizeof g->title);g->page=-2;
+        const unsigned ids[]={P_SLEN,P_SDIV,P_SSWING,P_SGATE};for(unsigned i=0;i<4;i++)editor_param(&g->param[g->count++],song.sel*256+ids[i],track_desc(TSEL,ids[i]),TSEL->p[ids[i]]);}
     for(unsigned i=0;i<NSTEP;i++){for(unsigned k=0;k<4;k++)out->steps[i][k]=-1;if(studio_drum(TSEL))out->steps[i][0]=TSEL->step[i].hit;else if(TSEL->step[i].time==ST_NOTE)for(unsigned k=0;k<TSEL->step[i].n&&k<4;k++)out->steps[i][k]=TSEL->step[i].note[k];}
-    static const char *const lanes[NLANE]={"KICK","SNARE","CLAP","HAT","OPEN HAT","TOM","RIM","BELL"};for(unsigned i=0;i<NLANE;i++)str_cpy(out->lanes[i],lanes[i],sizeof out->lanes[i]);studio_json(out);
+    for(unsigned i=0;i<NLANE;i++)str_cpy(out->lanes[i],drum_lane_name(TSEL,i),sizeof out->lanes[i]);studio_json(out);
 }

@@ -10,9 +10,10 @@ def stage(root,out,definition):
     import shutil
     (out/'source/web').mkdir(parents=True,exist_ok=True)
     shutil.copy2(root/'web/fukiai.ttf',out/'source/web/fukiai.ttf')
-    assets(out,[('aa_font','ui_fonts.h','--preset','inter-tight'),('aa_icons','ui_icons.h'),
+    assets(out,[('aa_font','ui_fonts.h','--preset','ghoulbox' if definition.id=='ghoulbox' else 'inter-tight'),('aa_icons','ui_icons.h'),
                 ('aa_keycaps','ui_keycaps.h'),('ui_palettes','ui_palettes.h'),('tables','felucca_tables.h'),
-                ('fm6_patches','felucca_fm6.h'),('samples','felucca_samples.h')])
+                ('fm6_patches','felucca_fm6.h'),('samples','felucca_samples.h')] +
+                ([('ghoulbox_art','ghoulbox_art.h')] if definition.id=='ghoulbox' else []))
     native=firmware(out)
     dsp=(root/'tests/hostsim.c').read_text().split('static void wav_hdr(')[0]
     dsp=replace(dsp,'#define __attribute__(x)','#ifdef __APPLE__\n#define __attribute__(x)\n#endif')
@@ -41,7 +42,21 @@ def stage(root,out,definition):
     editor=(Path(__file__).resolve().parents[2]/'adapters/sloop/native/editor.c').read_text()
     param=editor[editor.index('static void editor_param('):editor.index('void sloop_editor_snapshot(')]
     shared=Path(__file__).resolve().parents[2]/'adapters/felucca'
-    (native/'studio.c').write_text((shared/'studio.c').read_text()+"\n"+param+"\n"+(shared/'snapshot.c').read_text()+"\n"+(shared/'files.c').read_text())
+    studio=(shared/'studio.c').read_text()+"\n"+param+"\n"+(shared/'snapshot.c').read_text()+"\n"+(shared/'files.c').read_text()
+    if definition.id=='ghoulbox':
+        studio=studio.replace('if(ui.ml.on)ml_knob(tr,p);','')
+        studio=studio.replace('settings_later();','')
+        studio=studio.replace('if(t==27)perf_press(PF_RTHR,value!=0);if(t==28)perf_press(PF_ETHR,value!=0);','')
+        first=studio.index('if(t==3)ml_clear_all();')
+        last=studio.index('    else if(kind==SLOOP_ADVANCED)', first)
+        studio=studio[:first]+'}\n'+studio[last:]
+        studio=studio.replace('ui.ml.on','0')
+        first=studio.index('count=0;for(unsigned i=0;i<ML_N;')
+        last=studio.index('    J(',first)
+        studio=studio[:first]+studio[last:]
+        helpers=(shared.parent/'ghoulbox/note_length.c').read_text()
+        studio=helpers+studio
+    (native/'studio.c').write_text(studio)
     (out/'plugin.c').write_text('''/* SPDX-License-Identifier: GPL-3.0-only */
 #include "firmware.h"
 #include "native/emulator.c"

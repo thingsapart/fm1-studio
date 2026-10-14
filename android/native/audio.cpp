@@ -139,7 +139,7 @@ std::string string(JNIEnv *env, jstring text) {
 }
 }
 
-extern "C" JNIEXPORT jstring JNICALL Java_org_fm1_wrapper_Native_select(JNIEnv *env,jclass,jstring library,jstring id,jstring directory) {
+extern "C" JNIEXPORT jstring JNICALL Java_org_fm1_studio_Native_select(JNIEnv *env,jclass,jstring library,jstring id,jstring directory) {
     stop();
     try {
         session.select(string(env,library),string(env,id),string(env,directory));
@@ -149,30 +149,30 @@ extern "C" JNIEXPORT jstring JNICALL Java_org_fm1_wrapper_Native_select(JNIEnv *
         return nullptr;
     } catch(const std::exception &e) { return env->NewStringUTF(e.what()); }
 }
-extern "C" JNIEXPORT void JNICALL Java_org_fm1_wrapper_Native_start(JNIEnv *,jclass) {
+extern "C" JNIEXPORT void JNICALL Java_org_fm1_studio_Native_start(JNIEnv *,jclass) {
     if(running || !session.engine()) return;
     if(worker.joinable()) worker.join();
     running=true; worker=std::thread(run);
 }
-extern "C" JNIEXPORT void JNICALL Java_org_fm1_wrapper_Native_stop(JNIEnv *,jclass) { stop(); }
-extern "C" JNIEXPORT void JNICALL Java_org_fm1_wrapper_Native_emit(JNIEnv *,jclass,jint kind,jint id,jint value) {
+extern "C" JNIEXPORT void JNICALL Java_org_fm1_studio_Native_stop(JNIEnv *,jclass) { stop(); }
+extern "C" JNIEXPORT void JNICALL Java_org_fm1_studio_Native_emit(JNIEnv *,jclass,jint kind,jint id,jint value) {
     if(!running) return;
     std::lock_guard<std::mutex> lock(mutex);
     if(queue.size()>=2048) { queue.clear(); overflow=true; }
     queue.push_back({kind,id,value});
 }
-extern "C" JNIEXPORT void JNICALL Java_org_fm1_wrapper_Native_frame(JNIEnv *env,jclass,jintArray out) {
+extern "C" JNIEXPORT void JNICALL Java_org_fm1_studio_Native_frame(JNIEnv *env,jclass,jintArray out) {
     if(env->GetArrayLength(out)<240*240) return;
     std::lock_guard<std::mutex> lock(mutex);
     env->SetIntArrayRegion(out,0,pixels.size(),reinterpret_cast<const jint *>(pixels.data()));
 }
-extern "C" JNIEXPORT jstring JNICALL Java_org_fm1_wrapper_Native_status(JNIEnv *env,jclass) {
+extern "C" JNIEXPORT jstring JNICALL Java_org_fm1_studio_Native_status(JNIEnv *env,jclass) {
     std::lock_guard<std::mutex> lock(mutex);
     std::string text=std::to_string(rate.load())+" Hz · underruns "+std::to_string(underruns.load());
     if(!error.empty()) text+=" · "+error;
     return env->NewStringUTF(text.c_str());
 }
-extern "C" JNIEXPORT jstring JNICALL Java_org_fm1_wrapper_Native_editor(JNIEnv *env,jclass){
+extern "C" JNIEXPORT jstring JNICALL Java_org_fm1_studio_Native_editor(JNIEnv *env,jclass){
     auto snapshot=std::make_unique<sloop_editor>();
     {std::lock_guard<std::mutex> lock(mutex);*snapshot=editorState;}
     std::string json=fm1_studio_json(*snapshot);return env->NewStringUTF(json.c_str());
@@ -183,15 +183,15 @@ static void data(JNIEnv *env,int kind,int id,jbyteArray input){
     std::vector<uint8_t> bytes(n);env->GetByteArrayRegion(input,0,n,(jbyte *)bytes.data());
     std::lock_guard<std::mutex> lock(mutex);if(dataQueue.size()>=16||dataBytes+n>1048576){error="Import queue full";return;}dataBytes+=n;dataQueue.push_back({kind,id,std::move(bytes)});
 }
-extern "C" JNIEXPORT void JNICALL Java_org_fm1_wrapper_Native_data(JNIEnv *env,jclass,jint kind,jint id,jbyteArray input){data(env,kind,id,input);}
-extern "C" JNIEXPORT void JNICALL Java_org_fm1_wrapper_Native_sample(JNIEnv *env,jclass,jint slot,jbyteArray input){data(env,3,slot,input);}
-extern "C" JNIEXPORT jbyteArray JNICALL Java_org_fm1_wrapper_Native_object(JNIEnv *env,jclass,jint kind,jint id){
+extern "C" JNIEXPORT void JNICALL Java_org_fm1_studio_Native_data(JNIEnv *env,jclass,jint kind,jint id,jbyteArray input){data(env,kind,id,input);}
+extern "C" JNIEXPORT void JNICALL Java_org_fm1_studio_Native_sample(JNIEnv *env,jclass,jint slot,jbyteArray input){data(env,3,slot,input);}
+extern "C" JNIEXPORT jbyteArray JNICALL Java_org_fm1_studio_Native_object(JNIEnv *env,jclass,jint kind,jint id){
     auto rich=session.studio();if(running||!rich)return nullptr;std::vector<uint8_t> bytes(81920);unsigned n=rich->export_object(kind,id,bytes.data(),bytes.size());if(!n)return nullptr;
     jbyteArray result=env->NewByteArray(n);env->SetByteArrayRegion(result,0,n,(jbyte *)bytes.data());return result;
 }
-extern "C" JNIEXPORT jboolean JNICALL Java_org_fm1_wrapper_Native_restore(JNIEnv *env,jclass,jbyteArray input){
+extern "C" JNIEXPORT jboolean JNICALL Java_org_fm1_studio_Native_restore(JNIEnv *env,jclass,jbyteArray input){
     if(running||env->GetArrayLength(input)!=1048576)return JNI_FALSE;std::vector<uint8_t> bytes(1048576);env->GetByteArrayRegion(input,0,bytes.size(),(jbyte *)bytes.data());return session.restore(bytes.data(),bytes.size())?JNI_TRUE:JNI_FALSE;
 }
-extern "C" JNIEXPORT jintArray JNICALL Java_org_fm1_wrapper_Native_midi(JNIEnv *env,jclass){
+extern "C" JNIEXPORT jintArray JNICALL Java_org_fm1_studio_Native_midi(JNIEnv *env,jclass){
     std::lock_guard<std::mutex> lock(mutex);jintArray result=env->NewIntArray(midiOutput.size());std::vector<jint> bytes(midiOutput.begin(),midiOutput.end());if(!bytes.empty())env->SetIntArrayRegion(result,0,bytes.size(),bytes.data());midiOutput.clear();return result;
 }

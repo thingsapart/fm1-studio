@@ -1,4 +1,4 @@
-package org.fm1.wrapper;
+package org.fm1.studio;
 import java.util.Arrays;
 public class ChordNotesTest {
     static void eq(int[] want,int[] got){if(!Arrays.equals(want,got))throw new AssertionError(Arrays.toString(got));}

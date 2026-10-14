@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-package org.fm1.wrapper;
+package org.fm1.studio;
 import java.util.Arrays;
 public final class Jp1LedQueueTest {
     private static void check(boolean ok){if(!ok)throw new AssertionError();}

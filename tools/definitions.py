@@ -30,7 +30,7 @@ def java(firmwares, destination):
         rows.append(f'new Firmware({q(f.id)},{q(f.name)},new Screen[]{{{",".join(screens)}}},{studio})')
     destination.parent.mkdir(parents=True,exist_ok=True)
     destination.write_text("""// Generated from firmwares/*.py. Do not edit.
-package org.fm1.wrapper;
+package org.fm1.studio;
 final class Definitions {
  static final class Control {final String label;final int kind,target;Control(String l,int k,int t){label=l;kind=k;target=t;}}
  static final class Screen {final String title;final Control[] controls;final int[][] enter;Screen(String t,Control[] c,int[][] e){title=t;controls=c;enter=e;}}
@@ -77,5 +77,5 @@ def c(firmwares, destination):
     destination.write_text('\n'.join(lines) + '\n')
 
 if __name__ == '__main__':
-    java(FIRMWARES, PROJECT / 'build/generated/org/fm1/wrapper/Definitions.java')
+    java(FIRMWARES, PROJECT / 'build/generated/org/fm1/studio/Definitions.java')
     c(FIRMWARES, PROJECT / 'build/generated/screens.h')

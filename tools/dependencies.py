@@ -73,7 +73,7 @@ def setup_commands(target, profile=None):
     lines += ['# Use Python 3.10+; older distro releases may require a newer Python package.',
               'python3 -m venv .venv', '. .venv/bin/activate',
               'python3 -m pip install --upgrade pip',
-              'python3 -m pip install Pillow fonttools' + ('' if android else ' platformio'),
+              'python3 -m pip install Pillow fonttools numpy' + ('' if android else ' platformio'),
               'git submodule update --init --recursive']
     if android:
         lines += ['export ANDROID_SDK_ROOT="$PWD/build/android/sdk"',
@@ -119,9 +119,11 @@ def missing_dependencies(target, selected, abi='arm64-v8a', pio='pio', cc='cc', 
     for module, package in [('PIL', 'Pillow'), ('fontTools', 'fonttools')]:
         if importlib.util.find_spec(module) is None:
             missing.append(f'Python package {package} (for {sys.executable})')
+    if any(f.id == 'zp12' for f in selected) and importlib.util.find_spec('numpy') is None:
+        missing.append(f'Python package numpy (for {sys.executable})')
     for f in selected:
         root = Path(os.environ.get(f.source_env, PROJECT/f.default_source)).expanduser()
-        if not (root/'firmware/src/core.h').is_file():
+        if not (root/('firmware/src/zp12.c' if f.id == 'zp12' else 'firmware/src/core.h')).is_file():
             missing.append(f'{f.name} sources at {root} (initialize submodules or set {f.source_env})')
     if target == 'android':
         for tool in ('java', 'javac', 'keytool'):

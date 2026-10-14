@@ -11,15 +11,15 @@
 static void warm(const fm1_firmware *f){float pcm[512];for(unsigned i=0;i<100;i++){f->render(pcm,256);f->tick(i*6+1);}}
 int main(int argc,char **argv){
     assert(argc==2);std::string dir=argv[1];
-    const char *ids[]={"sloop","move","felucca","sloopdx"};int counts[]={4,8,4,4};
-    for(unsigned k=0;k<4;k++){
+    const char *ids[]={"sloop","move","felucca","sloopdx","ghoulbox"};int counts[]={4,8,4,4,4};
+    for(unsigned k=0;k<5;k++){
         std::string id=ids[k],save=dir+"/studio-"+id;mkdir(save.c_str(),0700);
         Session session;session.select(dir+"/"+id+".so",id,save);auto f=session.engine();auto editor=session.studio();assert(editor&&editor->snapshot&&editor->import_object&&editor->export_object&&editor->validate_image);
         warm(f);auto state=std::make_unique<sloop_editor>();editor->snapshot(state.get());assert(state->version==1&&state->group_count>0&&state->preset_count>0);
         int track=counts[k]-1;f->event(64+SLOOP_SELECT,track,0);f->event(64+SLOOP_MIX,track,87);f->event(64+SLOOP_MUTE,track,1);f->event(64+SLOOP_GLOBAL,0,137);editor->snapshot(state.get());assert(state->selected==track&&state->bpm==137&&state->tracks[track].level==87&&state->tracks[track].mute==1);
         f->event(64+SLOOP_MUTE,track,0);f->event(64+SLOOP_PARAM,state->length_parameter,32);editor->snapshot(state.get());assert(state->length==32);
         int synth=0;for(int i=0;i<counts[k];i++)if(!state->tracks[i].drum){synth=i;break;}
-        if(id!="felucca"){
+        if(id!="felucca"&&id!="ghoulbox"){
             // The snapshot marks armed recording active, so a second REC requests off.
             f->event(64+SLOOP_RECORD,synth,1);warm(f);editor->snapshot(state.get());
             std::ofstream(dir+"/jp1-armed-"+id+".json")<<fm1_studio_json(*state);
@@ -28,7 +28,7 @@ int main(int argc,char **argv){
             f->event(64+SLOOP_RECORD,synth,toggle);warm(f);editor->snapshot(state.get());
             assert(state->recording==0&&std::string(state->extra).find("\"recordState\":0")!=std::string::npos);
         }
-        f->event(64+SLOOP_SELECT,synth,0);f->event(64+SLOOP_STEP,synth*8192+60,1);editor->snapshot(state.get());assert(state->steps[0][0]==60);
+        f->event(64+SLOOP_SELECT,synth,0);f->event(64+SLOOP_ACTION,synth*256,0);f->event(64+SLOOP_STEP,synth*8192+60,1);editor->snapshot(state.get());assert(state->steps[0][0]==60);
         f->event(64+SLOOP_DETAIL,synth*65536+10,72); // Felucca probability; ignored elsewhere.
         for(int g=0;g<state->group_count;g++)for(int i=0;i<state->groups[g].count;i++){
             auto &p=state->groups[g].param[i];assert(p.min<=p.value&&p.value<=p.max);assert(p.choice_count<=128);assert(p.id>=FM1_GLOBAL_PARAMETER_BASE||p.id/256<counts[k]);

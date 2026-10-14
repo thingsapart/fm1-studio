@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-package org.fm1.wrapper;
+package org.fm1.studio;
 import java.util.*;
 public final class Jp1StatusTest {
     private static void check(boolean value){if(!value)throw new AssertionError();}

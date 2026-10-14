@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-package org.fm1.wrapper.tests;
+package org.fm1.studio.tests;
 
 import android.app.*;
 import android.content.Intent;
@@ -143,7 +143,7 @@ public final class ControllerPageInstrumentation extends Instrumentation {
     @Override public void onStart(){
         Bundle result=new Bundle();Activity activity=null;
         try{
-            activity=startActivitySync(new Intent().setClassName("org.fm1.wrapper","org.fm1.wrapper.MainActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            activity=startActivitySync(new Intent().setClassName("org.fm1.studio","org.fm1.studio.MainActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             host=activity;
             Field field=activity.getClass().getDeclaredField("instrument");field.setAccessible(true);view=field.get(activity);
             Field midiField=activity.getClass().getDeclaredField("midi");midiField.setAccessible(true);midi=midiField.get(activity);

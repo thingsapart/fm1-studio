@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-package org.fm1.wrapper;
+package org.fm1.studio;
 import java.util.*;
 public final class MidiEncodersTest {
     private static void check(boolean ok){if(!ok)throw new AssertionError();}

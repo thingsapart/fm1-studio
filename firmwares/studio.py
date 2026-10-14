@@ -80,9 +80,9 @@ class Studio:
 MENU = tuple(MenuEntry(label,action) for label,action in (
     ("NEW PROJECT","new"),("PROJECTS / SECTIONS","projects"),("CLEAR SELECTED TRACK","clear"),
     ("PATTERN ACTIONS / UNDO","pattern"),("USER SOUNDS","sounds"),("SAMPLE SLOTS / FILES","samples"),
-    ("MIDI / AUDIO / FILES","files"),("INSTRUMENT SETTINGS","settings"),("KEY / SCALE FOR ALL TRACKS","keyScale"),
+    ("MIDI / AUDIO / FILES","files"),("KEY / SCALE FOR ALL TRACKS","keyScale"),
     ("HOME / TRACK CONTROLS","home"),("PAGES","pages"),("SOUND / PRESET","preset"),
-    ("FM6 OPERATORS / BANKS","fm6"),("DRUM SYNTH","drumSynth"),("ALL FACTORY SOUNDS","catalogue"),("HARDWARE PANEL","hardware")))
+    ("FM6 OPERATORS / BANKS","fm6"),("DRUM SYNTH","drumSynth"),("ALL FACTORY SOUNDS","catalogue"),("HARDWARE PANEL","hardware"),("FM-1 STUDIO SETTINGS","settings")))
 SLOOP_PAGES=tuple(ParameterPage(title) for title in
     ("GLOBAL","MASTER","ENV","ENV DEST","LFO","LFO 2","LFO DEST","FX","FILTER","SLICER","INSERT","INSERT 2","DLY","REV/CHO","SEL","SEL 2","EDIT 1","EDIT 2","VOICE","VOICE 2","SYSTEM","DRUMS","MIDI","MIDI 2","TEXTURE","TEXTURE 2","ARP","ARP 2","PATTERN","KIT","TRIM","*"))
 MOVE_PAGES=tuple(ParameterPage(title,enter=((8,screen,256+page),)) for title,screen,page in (

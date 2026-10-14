@@ -20,7 +20,7 @@ def prepare(firmware):
     from build_lock import acquire
     acquire()
     root = source(firmware)
-    if not (root / 'firmware/src/core.h').is_file():
+    if not (root / ('firmware/src/zp12.c' if firmware.id == 'zp12' else 'firmware/src/core.h')).is_file():
         raise RuntimeError(f'{firmware.name}: missing source checkout at {root}; set {firmware.source_env}')
     adapter = importlib.import_module('adapters.' + firmware.adapter)
     adapter.verify(root)

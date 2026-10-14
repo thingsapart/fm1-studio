@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-package org.fm1.wrapper;
+package org.fm1.studio;
 
 public class KnobGeometryTest {
     static void check(boolean value){if(!value)throw new AssertionError();}

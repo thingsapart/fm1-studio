@@ -2,6 +2,8 @@
 
 ## Use it
 
+**MENU → PANEL LAYOUT → FM-1 / Studio** selects the shared hardware surface or Studio controls. In FM-1, JP-1 Performance, or the JP-1 controller panel, the existing PANEL tab reads **< STUDIO** and returns directly to the standard Studio panel. **BACK TO STUDIO** is also the first MENU entry in these views. Portrait uses two 2 × 2 knob clusters (Master/Select/Presets/Algo and K1–K4), followed by two rows of six firmware-defined buttons. Landscape keeps K1–K4 in one row. The playing keyboard/pads dock across the bottom, with held octave buttons for piano keys and a collapse/reopen control in navigation. Drum pads hide the entire octave/key-bank row. The layout preference is shared across firmwares; keyboard visibility is remembered separately for FM-1 mode. zp12 defaults to this surface unless a layout has already been chosen. Hardware encoders use relative native events and optional firmware-provided labels/values; Master uses the existing volume preference. The panel reuses Studio knobs, buttons, gestures and generated firmware control bindings. Duplicate transport and track selectors are hidden; page navigation and MENU stay in a fixed bottom dock on every page. The navigation dock uses flat tabs, a selected-page underline, and a separating gutter instead of instrument-style raised buttons. FM-1 has no extra top toolbar. Knob dials remain circular at compact heights. PLAY pulses red once per second during playback. Pinch-to-zoom retains a separate FM-1 display size; native-display track selection uses the generated per-firmware hit areas, including zp12’s eight channel faders.
+
 The full SLOOP Android instrument surface is shared across the four engines:
 native display and display zoom, track and sound selectors, parameter knobs,
 piano roll/drum grid, step details, mixer/solo/mutes, performance tools, projects,
@@ -14,7 +16,7 @@ Android **PANEL → SOUND** presents a common instrument overview from native pa
 **STEPS** keeps row and column headers visible while scrolling. The synth piano roll draws each onset as a separate block with an attack mark, and held notes/chords as continuous bars across tied steps. Bars continue cleanly across 16-step bank boundaries. On synth tracks, the small stacked-note **chord icon** in the step toolbar opens a visual editor with direct root/chord-type buttons, a lit keyboard preview, octave/voicing arrows, ▶ audition and shared duration. **PLACE ON GRID** readies one chord. Tap a step number or any cell in its column to stamp the chosen pitches once; the pressed column and notes preview the target, and placement then returns to normal note editing. The icon cancels pending placement, and the chosen chord is remembered. Insertion uses empty steps with playback and recording stopped and can be undone as one gesture. External MIDI recording remains available through the existing MIDI input; this chord sheet does not capture a held MIDI chord.
 
 The display remains visible beside the controls in landscape and above them in
-portrait. **Menu → Instrument Settings → Firmware** switches engines; there is
+portrait. **Menu → FM-1 Studio Settings → Firmware** switches engines; there is
 no firmware selector in the main instrument surface. Display layout, zoom and
 MIDI preferences are kept separately for each firmware.
 
@@ -96,7 +98,7 @@ the current engine. The selection preference changes only after a successful
 load. Returning to an engine restores its working project with transport stopped.
 
 Android saves are separate app-private `sloop.flash`, `move.flash` and
-`felucca.flash` and `sloopdx.flash` images. File replacement uses a temporary file, flush and fsync.
+`felucca.flash`, `sloopdx.flash`, `ghoulbox.flash` and `zp12.flash` images. File replacement uses a temporary file, flush and fsync.
 Native object CRCs and formats remain the firmware's own. The Android selector
 does not convert projects between firmwares or import the old SLOOP app's data.
 Normal suspension checkpoints; an abrupt process kill can still lose unsaved edits.
@@ -109,6 +111,8 @@ Each firmware has one declarative UI definition:
 - `firmwares/move.py`
 - `firmwares/felucca.py`
 - `firmwares/sloopdx.py`
+- `firmwares/ghoulbox.py` (Felucca adapter with older-base compatibility and dungeon assets)
+- `firmwares/zp12.py` (native panel, eight-channel mixer, MIDI and full-flash saves)
 
 The `Studio` declaration controls the complete Android surface: ordered layout
 components, tabs, menu routes, parameter pages and their field order, sheet
@@ -205,7 +209,7 @@ This is the first pickup/performance pass. The complete sound → record → ove
 
 ### Controller page regression on Android
 
-After building the app, `python3 tests/android_controller_build.py` builds a separate instrumentation APK. Install `build/android/controller-tests.apk` alongside the current app, then run `adb shell am instrument -w org.fm1.wrapper.tests/.ControllerPageInstrumentation`. The test temporarily disconnects MIDI input and sweeps the actual SELECT control forward/backward in every bank, with slow and burst input, delayed native snapshots, and relative turns. It navigates pages in the current project without editing sounds and restores the original bank/page on success. Restart the app after instrumentation to reconnect the controller. The host suite also covers MIDI decoding, all selector sizes, pickup, stale echoes and context changes.
+After building the app, `python3 tests/android_controller_build.py` builds a separate instrumentation APK. For a release app, pass `--release` to the test builder too so both APKs use the same certificate. Install `build/android/controller-tests.apk` alongside the current app, then run `adb shell am instrument -w org.fm1.studio.tests/.ControllerPageInstrumentation`. The test temporarily disconnects MIDI input and sweeps the actual SELECT control forward/backward in every bank, with slow and burst input, delayed native snapshots, and relative turns. It navigates pages in the current project without editing sounds and restores the original bank/page on success. Restart the app after instrumentation to reconnect the controller. The host suite also covers MIDI decoding, all selector sizes, pickup, stale echoes and context changes.
 
 The Steps view reveals an edited step and its drum lane or note octave, including JP-1 edits. During playback it follows the selected track’s playhead across 16-step banks and scrolls horizontally only when the playhead leaves the visible cells. Sticky row/column labels are excluded from the usable viewport. Following pauses during grid touches and open editor sheets; playback does not change the selected drum lane or note octave.
 
@@ -213,4 +217,6 @@ For the Steps viewport device checks, run the same instrumentation command with 
 
 With a drum track selected, the controller instrumentation also accepts `-e pads true` to check every physical pad’s drum-note destination on KIT, no sequence-view navigation with the keyboard hidden, explicit Steps override, and leaving the overview.
 
-JP-1 track-to-page regression: run `adb shell am instrument -w -e tracks true org.fm1.wrapper.tests/.ControllerPageInstrumentation` after building and installing the regression APK. It starts knob 2 away from the current track without acquiring pickup, traverses every visible track both ways and jumps between endpoints in every bank, then verifies knob 1 immediately reaches both page endpoints without crossing the new track’s current page. Track selection bypasses pickup so each track-change rebuild cannot interrupt the turn. The original track, bank and page are restored.
+JP-1 track-to-page regression: run `adb shell am instrument -w -e tracks true org.fm1.studio.tests/.ControllerPageInstrumentation` after building and installing the regression APK. It starts knob 2 away from the current track without acquiring pickup, traverses every visible track both ways and jumps between endpoints in every bank, then verifies knob 1 immediately reaches both page endpoints without crossing the new track’s current page. Track selection bypasses pickup so each track-change rebuild cannot interrupt the turn. The original track, bank and page are restored.
+
+Firmware MIDI/JP-1 integration checks: after building the app and `tests/android_controller_build.py`, install both APKs and run `adb shell am instrument -w -e engine zp12 org.fm1.studio.tests/.FirmwareMidiInstrumentation`, then repeat with `-e engine ghoulbox`. The runner feeds the actual JP-1 decoder into the Activity and JNI, checks all three knob banks and pad destinations, and isolates/restores the firmware flash and JP-1 preferences. This verifies the software path on-device; physical BLE LED rendering still requires the connected controller.

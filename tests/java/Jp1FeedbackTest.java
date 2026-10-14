@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-package org.fm1.wrapper;
+package org.fm1.studio;
 public final class Jp1FeedbackTest {
     private static void check(boolean ok){if(!ok)throw new AssertionError();}
     private static int at(int[] colors,int pad){return colors[Jp1Rgb.slot(pad)];}

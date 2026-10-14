@@ -28,12 +28,19 @@ build/
 *.ap_
 *.keystore
 *.jks
+# Signing-key backups and APK v4 signature sidecars.
+*.keystore.*
+*.jks.*
+*.idsig
+*.p12
+*.pfx
 .gradle/
 .cxx/
 .externalNativeBuild/
 local.properties
 /android/sdk/
 /android/ndk/
+/android/signing/
 
 # ESP-IDF / PlatformIO generated state and downloaded components.
 .pio/

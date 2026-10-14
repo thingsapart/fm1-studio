@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-package org.fm1.wrapper;
+package org.fm1.studio;
 public final class Jp1PadsTest {
     private static void check(boolean ok){if(!ok)throw new AssertionError();}
     public static void main(String[] args){
@@ -7,6 +7,8 @@ public final class Jp1PadsTest {
             int note=Jp1Pads.sourceNote(pad,bank,52);
             check(Jp1Pads.bank(note,52)==bank);check(Jp1Pads.lane(note,52)==pad);check(Jp1Pads.step(note,52)==bank*16+pad);
         }
+        for(int bank=0;bank<3;bank++)for(int pad=0;pad<16;pad++)check(Jp1Pads.samplerPitch(pad,bank)==36+pad+(bank==1?16:0));
+        check(Jp1Pads.samplerPitch(-1,0)==-1&&Jp1Pads.samplerPitch(16,0)==-1);
         check(Jp1Pads.lane(35,52)==-1&&Jp1Pads.lane(84,52)==-1);
         check(Jp1Pads.plays(Jp1Pads.AUTO,true)&&!Jp1Pads.plays(Jp1Pads.AUTO,false));
         check(Jp1Pads.plays(Jp1Pads.PLAY,false)&&!Jp1Pads.plays(Jp1Pads.STEPS,true));

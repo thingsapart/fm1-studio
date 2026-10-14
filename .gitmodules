@@ -10,3 +10,9 @@
 [submodule "fw-ext/fm1-sloop"]
 	path = fw-ext/fm1-sloop
 	url = https://github.com/thingsapart/sloop-fm1.git
+[submodule "fw-ext/ghoulbox"]
+	path = fw-ext/ghoulbox
+	url = https://github.com/jasonpersinger/ghoulbox-fm1-dungeon-synth.git
+[submodule "fw-ext/zp12"]
+	path = fw-ext/zp12
+	url = https://github.com/zvenson/zp12.git

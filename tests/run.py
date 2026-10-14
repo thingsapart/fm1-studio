@@ -38,6 +38,16 @@ __attribute__((visibility("default"))) int fm1_test_user_sample(void){
     memcpy(base,old,sizeof old);smp_user_scan(0);return ok;
 }
 '''.replace('SAMPLE_BYTE',sample_byte)
+    if firmware.id=='ghoulbox':extra+='''
+__attribute__((visibility("default"))) int fm1_test_midi_owned(int ch,int t){return midi_ch[ch].owned[t];}
+__attribute__((visibility("default"))) int fm1_test_held(int t){int n=0;for(unsigned i=0;i<NVOICE;i++)n+=trk[t].v[i].active&&trk[t].v[i].gate;return n;}
+__attribute__((visibility("default"))) int fm1_test_route_parameter(void){return G_ROUTE;}
+'''
+    if firmware.id=='zp12':extra='''
+__attribute__((visibility("default"))) int fm1_test_user_wave(void){
+    unsigned i=KIT_NWAVE+2;sp_wave[i]=sp_wave[0];strcpy(ui_uname[2],"USERTEST");return i;
+}
+'''
     if firmware.id=='sloopdx':
         extra=extra[:extra.index('__attribute__((visibility("default"))) int fm1_test_user_sample')]
     if firmware.adapter=='move':extra+='__attribute__((visibility("default"))) int fm1_test_screen(void){return ctl.screen;}\n'
@@ -52,8 +62,13 @@ run([cxx,'-std=c++17','-I'+str(PROJECT/'native'),PROJECT/'tests/studio_test.cpp'
 run([out/'studio_test',out])
 run([cxx,'-std=c++17','-I'+str(PROJECT/'native'),PROJECT/'tests/sloopdx_test.cpp',PROJECT/'native/session.cpp','-o',out/'sloopdx_test'])
 run([out/'sloopdx_test',out])
+run([cxx,'-std=c++17','-I'+str(PROJECT/'native'),PROJECT/'tests/zp12_test.cpp',PROJECT/'native/session.cpp','-o',out/'zp12_test'])
+run([out/'zp12_test',out])
+run([cxx,'-std=c++17','-I'+str(PROJECT/'native'),PROJECT/'tests/midi_firmwares_test.cpp',PROJECT/'native/session.cpp','-o',out/'midi_firmwares_test'])
+run([out/'midi_firmwares_test',out])
 import json
 for firmware in FIRMWARES:
+    if firmware.id=='zp12':continue
     snapshot=json.loads((out/('studio-'+firmware.id+'.json')).read_text())
     assert snapshot['version']==1 and snapshot['bpm']==137 and len(snapshot['detail'])==(128 if firmware.id=='sloopdx' else 64)
     assert len(snapshot['keyNotes'])==27 and all(-1<=n<=127 for n in snapshot['keyNotes'])
@@ -84,6 +99,6 @@ for bad in (
     except ValueError:pass
 print('PASS shared Java/C descriptors and invalid-mapping rejection')
 
-run(['javac','--release','8','-d',out/'java-classes',*[PROJECT/'android/java/org/fm1/wrapper'/name for name in ('MidiFile.java','MidiParser.java','MidiEncoders.java','Jp1Controller.java','Jp1Pads.java','Jp1Rgb.java','Jp1Feedback.java','Jp1LedQueue.java','Jp1Status.java','ControllerValue.java','SampleCodec.java','TrackGeometry.java','ChordNotes.java','ChordPlacement.java','KnobGesture.java','KnobGeometry.java','PianoRollNotes.java','StepViewport.java','DrumSound.java')],out/'Definitions.java',*sorted((PROJECT/'tests/java').glob('*.java'))])
+run(['javac','--release','8','-d',out/'java-classes',*[PROJECT/'android/java/org/fm1/studio'/name for name in ('MidiFile.java','MidiParser.java','MidiEncoders.java','Jp1Controller.java','Jp1Pads.java','Jp1Rgb.java','Jp1Feedback.java','Jp1LedQueue.java','Jp1Status.java','ControllerValue.java','SampleCodec.java','TrackGeometry.java','ChordNotes.java','ChordPlacement.java','KnobGesture.java','KnobGeometry.java','PianoRollNotes.java','StepViewport.java','DrumSound.java')],out/'Definitions.java',*sorted((PROJECT/'tests/java').glob('*.java'))])
 for test in sorted((PROJECT/'tests/java').glob('*Test.java')):
-    run(['java','-cp',out/'java-classes','org.fm1.wrapper.'+test.stem,*([out/'sample-adpcm.bin'] if test.stem=='SampleCodecTest' else [])])
+    run(['java','-cp',out/'java-classes','org.fm1.studio.'+test.stem,*([out/'sample-adpcm.bin'] if test.stem=='SampleCodecTest' else [])])

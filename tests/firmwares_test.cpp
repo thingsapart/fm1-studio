@@ -28,8 +28,8 @@ static void image(const fm1_firmware *f,const std::string &path) {
 }
 int main(int argc,char **argv) {
     assert(argc==2);std::string dir=argv[1];Session session;
-    const char *ids[]={"sloop","move","felucca","sloopdx"};int tracks[]={4,8,4,4};
-    for(unsigned k=0;k<4;k++) {
+    const char *ids[]={"sloop","move","felucca","sloopdx","ghoulbox"};int tracks[]={4,8,4,4,4};
+    for(unsigned k=0;k<5;k++) {
         std::string id=ids[k],lib=dir+"/"+id+".so";
         session.select(lib,id,dir);auto f=session.engine();warm(f);
         void *handle=dlopen(lib.c_str(),RTLD_NOW|RTLD_LOCAL);assert(handle);
@@ -50,7 +50,7 @@ int main(int argc,char **argv) {
         session.suspend();assert(!f->playing());
         printf("PASS %s: %d real tracks, audio, pixels, transport%s\n",ids[k],tracks[k],id=="sloopdx"?"":" and 64-bit user samples");
     }
-    for(unsigned k=0;k<4;k++) {
+    for(unsigned k=0;k<5;k++) {
         std::string id=ids[k],lib=dir+"/"+id+".so";
         session.select(lib,id,dir);warm(session.engine());
         void *handle=dlopen(lib.c_str(),RTLD_NOW|RTLD_LOCAL);assert(handle);
@@ -58,7 +58,7 @@ int main(int argc,char **argv) {
         printf("RESTORE %s bpm=%d expected=%u\n",ids[k],get(),121+k*7);
         assert(get()==int(121+k*7));dlclose(handle);
     }
-    puts("PASS switching all four real firmwares restores independent native autosaves");
+    puts("PASS switching all five real firmwares restores independent native autosaves");
     for(auto id:ids){
         std::string lib=dir+"/"+id+".so";
         // Fresh save namespaces and separate Session objects ensure cold state.
