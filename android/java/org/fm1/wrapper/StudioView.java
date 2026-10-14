@@ -46,6 +46,8 @@ final class StudioView extends LinearLayout {
     private String page="PANEL", structure="";
     private boolean active, keysOpen, landscape, soundsOpen;
     private int panelPage=-1;
+    private String panelVirtualTitle="";
+    private final ControllerValue.Selector jpPageSelector=new ControllerValue.Selector();
     private OctaveOverview octaveOverview;
     private boolean soundOverview=true;
     private Envelope envelope;
@@ -58,8 +60,14 @@ final class StudioView extends LinearLayout {
     private void selectTrack(int track){if(!canSelectTrack())return;if(track!=selected){soundsOpen=false;soundsTrack=-1;removeCallbacks(hideSounds);updateKeys();}releaseAll();Native.event(Native.SELECT,track,0);}
     private void revealSounds(int track){showSounds(track,true);}
     private void showSounds(int track,boolean toggle){if(!canSelectTrack())return;releaseAll();Native.event(Native.SELECT,track,0);soundsOpen=toggle?!(soundsOpen&&soundsTrack==track):true;soundsTrack=track;updateKeys();soundActivity();}
-    private JSONObject panelGroup(){if(panelPage<-1&&state!=null){JSONArray g=state.optJSONArray("groups");for(int i=0;i<g.length();i++)if(g.optJSONObject(i).optInt("page")==panelPage)return g.optJSONObject(i);}return state.optJSONObject("current");}
-    private void selectGroup(int id){cancelChordStamp();drumEditor=false;soundOverview=false;releaseAll();if(!page.equals("JP LIVE"))page="PANEL";updateKeys();panelPage=id<-1?id:-1;if(id>=0)Native.event(Native.PAGE,id,0);else Native.event(Native.EDITOR_HOME,0,0);if(state!=null){JSONArray groups=state.optJSONArray("groups");for(int i=0;i<groups.length();i++)if(groups.optJSONObject(i).optInt("page")==id){navigate(groups.optJSONObject(i));break;}}rebuild();}
+    private JSONObject panelGroup(){if((panelPage<-1||!panelVirtualTitle.isEmpty())&&state!=null){JSONArray g=state.optJSONArray("groups");for(int i=0;i<g.length();i++)if(g.optJSONObject(i).optInt("page")==panelPage&&(panelVirtualTitle.isEmpty()||panelVirtualTitle.equals(g.optJSONObject(i).optString("title"))))return g.optJSONObject(i);}return state.optJSONObject("current");}
+    private void selectGroupAt(int choice){
+        JSONObject group=choice==0?null:state.optJSONArray("groups").optJSONObject(choice-1);
+        if(choice!=0&&group==null)return;
+        jpPageSelector.pickup.rearm();jpPageSelector.sent(choice,android.os.SystemClock.uptimeMillis());
+        selectGroup(group==null?-1:group.optInt("page"),group!=null&&group.optInt("page")==-1?group.optString("title"):"");
+    }
+    private void selectGroup(int id,String virtualTitle){panelVirtualTitle=virtualTitle;cancelChordStamp();drumEditor=false;soundOverview=false;releaseAll();if(!page.equals("JP LIVE"))page="PANEL";updateKeys();panelPage=id<-1?id:-1;if(id>=0)Native.event(Native.PAGE,id,0);else Native.event(Native.EDITOR_HOME,0,0);if(state!=null){JSONArray groups=state.optJSONArray("groups");for(int i=0;i<groups.length();i++)if(groups.optJSONObject(i).optInt("page")==id){navigate(groups.optJSONObject(i));break;}}rebuild();}
     int selected; private int bank, octave=4;
     private int keyBank;
     private final Rect cameraInsets=new Rect();
@@ -168,27 +176,44 @@ final class StudioView extends LinearLayout {
     }
     private void setKeys(boolean open){releaseAll();keysOpen=open;((MainActivity)getContext()).controllerPadModeChanged();updateKeys();rebuild();requestLayout();}
     boolean controllerKeysVisible(){return keysOpen;}
+    private boolean jpPadsPlaying;
+    boolean controllerPadsPlay(int mode){
+        boolean kitOverview=false;
+        if(state!=null&&isDrum()&&(page.equals("PANEL")||page.equals("JP LIVE")||page.equals("MORE"))){
+            JSONObject group=panelGroup();
+            if(!page.equals("MORE")){
+                // Use the requested page immediately, before the native snapshot catches up.
+                int choice=jpRole(0).optInt("value");
+                group=choice>0?state.optJSONArray("groups").optJSONObject(choice-1):null;
+            }
+            kitOverview=group!=null&&"KIT".equals(group.optString("nativeTitle",group.optString("title")));
+        }
+        return Jp1Pads.plays(mode,keysOpen,kitOverview);
+    }
     void toggleControllerKeys(){setKeys(!keysOpen);}
     private boolean jpConnected,jpKnobPane,jpBankStatusLive;
     private String jpSoundPage="";
     private final ArrayList<Knob> jpAssignedKnobs=new ArrayList<>();
+    private static final String[] JP_KNOB_POSITIONS={"1L","1R","2L","2R","3L","3R","4L","4R"};
     private int jpRenderedBank=-1;
     private TextView jpLiveHeading,jpLiveStatus;
     private View jpLivePads;
     private int jpKnobBank,jpPadBank,jpPadMode,jpPadOctave,jpSoundLane,jpSoundPitch=60;
-    void controllerConnection(boolean connected){for(Knob knob:jpAssignedKnobs)if(knob!=null)knob.pickup.rearm();jpConnected=connected;if(!connected)jpBankStatusLive=false;updateControllerStatus();}
+    void controllerConnection(boolean connected){jpPageSelector.reset();for(Knob knob:jpAssignedKnobs)if(knob!=null)knob.pickup.rearm();jpConnected=connected;if(!connected)jpBankStatusLive=false;updateControllerStatus();}
     void controllerBankStatus(boolean live){if(jpBankStatusLive==live)return;jpBankStatusLive=live;updateControllerStatus();}
     void controllerReportedKnobBank(int bank){if(bank!=jpKnobBank){android.util.Log.d("FM1-JP1-GATT","Knob bank "+(char)('A'+bank));controllerBank(bank);}}
     void controllerBank(int bank){boolean changed=jpKnobBank!=bank||jpRenderedBank!=bank||!jpKnobPane||!(page.equals("PANEL")||page.equals("JP LIVE"));if(jpKnobBank!=bank)((MainActivity)getContext()).getSharedPreferences("jp1",0).edit().putInt("lastKnobBank",bank).apply();jpKnobBank=bank;jpKnobPane=true;if(!changed)return;updateControllerStatus();controllerFeedback(false);if(state!=null&&sheet==null){if(!page.equals("JP LIVE"))page="PANEL";rebuild();}}
     void controllerPadStatus(int mode,int bank,int shift){if(mode==jpPadMode&&bank==jpPadBank&&shift==jpPadOctave)return;if(bank!=jpPadBank)android.util.Log.d("FM1-JP1-GATT","Pad bank "+(char)('A'+bank));Arrays.fill(jpFlashUntil,0);if(bank!=jpPadBank&&state!=null&&state.optInt("playing")==0)jpFollowWindow=bank;jpPadMode=mode;jpPadBank=bank;jpPadOctave=shift;updateControllerStatus();controllerFeedback(true);}
     void controllerSound(int lane,int pitch){if((lane<0||lane==jpSoundLane)&&pitch==jpSoundPitch)return;if(lane>=0)jpSoundLane=lane;jpSoundPitch=pitch;updateControllerStatus();}
     private void updateControllerStatus(){
+        boolean playingPads=controllerPadsPlay(jpPadMode);
+        if(playingPads!=jpPadsPlaying){jpPadsPlaying=playingPads;((MainActivity)getContext()).controllerPadModeChanged();}
         int layer=state==null?0:state.optInt("layer");
         toolState.setVisibility(jpConnected||layer==2||layer==3?VISIBLE:GONE);
         if(layer==2||layer==3){toolState.setText(layer==2?"ERASE ON · TAP TO SWITCH OFF":"REPEAT ON · TAP TO SWITCH OFF");return;}
         if(!jpConnected)return;
         if(state==null){toolState.setText("JP-1 CONNECTED");return;}
-        boolean plays=Jp1Pads.plays(jpPadMode,keysOpen);
+        boolean plays=controllerPadsPlay(jpPadMode);
         String sound=isDrum()&&state!=null?state.optJSONArray("lanes").optString(drumEditor?drumLane:jpSoundLane):"NOTE "+jpSoundPitch;
         String detail;
         if(!plays){int first=controllerStepWindow()*16+1;boolean follow=((MainActivity)getContext()).getSharedPreferences("jp1",0).getBoolean("ledFollow",true);detail=(first>state.optInt("length")?"NO STEPS IN THIS BANK":"STEPS "+first+"–"+Math.min(first+15,state.optInt("length")))+" · "+(follow?"FOLLOW":"FIXED")+" · "+sound;}
@@ -200,7 +225,7 @@ final class StudioView extends LinearLayout {
     private static String jpNote(int pitch){String[] names={"C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"};return names[pitch%12]+(pitch/12-1);}
     private void showControllerPads(){
         if(state==null||!jpConnected)return;
-        boolean plays=Jp1Pads.plays(jpPadMode,keysOpen);LinearLayout body=column();
+        boolean plays=controllerPadsPlay(jpPadMode);LinearLayout body=column();
         body.addView(label(plays?(isDrum()?"ALL BANKS SHARE THIS DRUM LAYOUT":"BOTTOM-LEFT: OCT− · TOP-RIGHT: OCT+"):"WINDOW "+(controllerStepWindow()*16+1)+"–"+Math.min(controllerStepWindow()*16+16,state.optInt("length")),12,GREEN),lpFill(32));
         for(int r=0;r<4;r++){LinearLayout row=row();for(int c=0;c<4;c++){int pad=r*4+c;String text;
             if(!plays){int step=controllerStepWindow()*16+pad;text=step<state.optInt("length")?"STEP "+(step+1):"—";}
@@ -227,7 +252,7 @@ final class StudioView extends LinearLayout {
     private int jpLedTrack=-1;
     private void controllerFeedback(boolean repaint){
         if(state==null||!jpConnected)return;long now=android.os.SystemClock.uptimeMillis();if(jpLedTrack!=selected){Arrays.fill(jpFlashUntil,0);jpLedTrack=selected;repaint=true;}
-        Jp1Feedback.State lights=new Jp1Feedback.State();lights.plays=Jp1Pads.plays(jpPadMode,keysOpen);lights.drum=isDrum();lights.bank=controllerStepWindow();lights.octave=jpPadOctave;lights.length=state.optInt("length");lights.position=state.optInt("position");lights.playing=state.optInt("playing")!=0;lights.recording=(state.optInt("recording")&(1<<selected))!=0;
+        Jp1Feedback.State lights=new Jp1Feedback.State();lights.plays=controllerPadsPlay(jpPadMode);lights.drum=isDrum();lights.bank=controllerStepWindow();lights.octave=jpPadOctave;lights.length=state.optInt("length");lights.position=state.optInt("position");lights.playing=state.optInt("playing")!=0;lights.recording=(state.optInt("recording")&(1<<selected))!=0;
         JSONObject track=state.optJSONArray("tracks").optJSONObject(selected);int solo=state.optInt("solo");lights.muted=track.optInt("mute")!=0||(solo!=0&&(solo&(1<<selected))==0);lights.selectedLane=drumEditor?drumLane:jpSoundLane;lights.lanes=definition.drumNotes.length;
         JSONArray steps=state.optJSONArray("steps"),detail=state.optJSONArray("detail"),keyNotes=state.optJSONArray("keyNotes");int sounding=state.optInt("sounding");
         for(int pad=0;pad<16;pad++){
@@ -254,7 +279,9 @@ final class StudioView extends LinearLayout {
         else if(notes.optInt(0,-1)>=0||state.optJSONArray("detail").optJSONObject(step).optInt("time")==1)Native.event(Native.DETAIL,selected*state.optInt("detailStride",65536)+step*1024+7,0);
         else Native.event(Native.STEP,selected*state.optInt("stepStride",8192)+step*128+jpSoundPitch,1);
         Native.event(Native.ACTION,selected*256+53,0);
+        focusStep(step,isDrum()?lane:jpSoundPitch);
     }
+    void focusStep(int step,int note){if(grid!=null)grid.focusStep(step,note);}
     void clearControllerPiano(){keyboard.restorePiano();}
 
     void setCompactDisplay(boolean compact){releaseAll();closeSheets();compactDisplay=compact;((MainActivity)getContext()).getPreferences(0).edit().putBoolean("compactDisplay",compact).apply();updateTrackLayout();requestLayout();screen.invalidate();}
@@ -298,7 +325,7 @@ final class StudioView extends LinearLayout {
     @Override protected void onSizeChanged(int w,int h,int ow,int oh){super.onSizeChanged(w,h,ow,oh);releaseAll();closeSheets();}
     void openPage(String name){
         if(!name.equals("STEPS"))cancelChordStamp();
-        if(!name.equals("PANEL"))panelPage=-1;
+        if(!name.equals("PANEL")&&!name.equals("JP LIVE")){panelPage=-1;panelVirtualTitle="";jpPageSelector.reset();}
         releaseAll();if(page.equals("MORE")&&!name.equals("MORE")&&state!=null){int current=state.optJSONObject("current").optInt("page");Native.event(current>=0?Native.PAGE:Native.EDITOR_HOME,Math.max(0,current),0);}
         page=name;updateKeys();
         if(name.equals("SONG"))Native.event(Native.ACTION,51,0);
@@ -322,14 +349,13 @@ final class StudioView extends LinearLayout {
     private void stepPreset(int delta){soundActivity();if(state==null)return;releaseAll();if(isDrum()&&(definition.fixedDrum>=0||definition.has("clips"))){chooseKit();return;}int value=Math.max(0,Math.min(state.optJSONArray("presets").length()-1,state.optInt("preset")+delta));Native.event(Native.PRESET,selected,value);}
     private void chooseKit(){if(state==null)return;JSONArray groups=state.optJSONArray("groups");for(int i=0;i<groups.length();i++)if(groups.optJSONObject(i).optString("title").equals("KIT")){JSONObject p=groups.optJSONObject(i).optJSONArray("params").optJSONObject(0);new Knob(p).openEditor();return;}}
     void chooseGroup(){
-        if(state==null)return;JSONArray groups=state.optJSONArray("groups");String[] names=new String[groups.length()+1];names[0]="HOME / TRACK CONTROLS";int current=0;
-        for(int i=0;i<groups.length();i++){JSONObject g=groups.optJSONObject(i);names[i+1]=g.optString("title");if(g.optInt("page")==panelGroup().optInt("page"))current=i+1;}
-        picker(firmware.name+" PAGES",names,current,false,n->{selectGroup(n==0?-1:groups.optJSONObject(n-1).optInt("page"));});
+        if(state==null)return;JSONArray groups=state.optJSONArray("groups");String[] names=new String[groups.length()+1];names[0]="HOME / TRACK CONTROLS";int current=jpRole(0).optInt("value");
+        for(int i=0;i<groups.length();i++)names[i+1]=groups.optJSONObject(i).optString("title");
+        picker(firmware.name+" PAGES",names,current,false,this::selectGroupAt);
     }
     private void walkGroup(int delta){
-        if(state==null)return;JSONArray groups=state.optJSONArray("groups");int current=panelGroup().optInt("page"),index=-1;
-        for(int i=0;i<groups.length();i++)if(groups.optJSONObject(i).optInt("page")==current){index=i;break;}
-        int next=Math.max(-1,Math.min(groups.length()-1,index+delta));selectGroup(next<0?-1:groups.optJSONObject(next).optInt("page"));
+        if(state==null)return;JSONArray groups=state.optJSONArray("groups");int current=jpRole(0).optInt("value");
+        selectGroupAt(Math.max(0,Math.min(groups.length(),current+delta)));
     }
     private void editTempo(){if(state==null)return;numberEditor("TEMPO / BPM",state.optInt("bpm"),40,240,n->Native.event(Native.GLOBAL,0,n));}
 
@@ -396,7 +422,7 @@ final class StudioView extends LinearLayout {
     }
     private void navigate(JSONObject group){String title=group.optString("nativeTitle",group.optString("title"));for(Definitions.ParameterPage page:definition.pages)if(page.nativeTitle.equals(title)){for(int[] event:page.enter)Native.emit(event[0],event[1],event[2]);return;}}
     private void accept(JSONObject next){
-        int old=selected;boolean soundChanged=state!=null&&(state.optInt("preset")!=next.optInt("preset")||state.optInt("engine")!=next.optInt("engine"));if(soundChanged)for(Knob knob:jpAssignedKnobs)if(knob!=null)knob.pickup.rearm();state=next;selected=state.optInt("selected");if(old!=selected){keyboard.restorePiano();requestLayout();releaseAll();cancelChordStamp();drumEditor=false;drumKit=-1;bank=0;panelPage=-1;if(soundsOpen&&soundsTrack!=selected){soundsOpen=false;soundsTrack=-1;removeCallbacks(hideSounds);updateKeys();}}
+        int old=selected;boolean soundChanged=state!=null&&(state.optInt("preset")!=next.optInt("preset")||state.optInt("engine")!=next.optInt("engine"));if(soundChanged)for(Knob knob:jpAssignedKnobs)if(knob!=null)knob.pickup.rearm();state=next;selected=state.optInt("selected");if(old!=selected){keyboard.restorePiano();requestLayout();releaseAll();cancelChordStamp();drumEditor=false;drumKit=-1;bank=0;panelPage=-1;panelVirtualTitle="";if(soundsOpen&&soundsTrack!=selected){soundsOpen=false;soundsTrack=-1;removeCallbacks(hideSounds);updateKeys();}}
         if(drumEditor&&!canEditDrumSounds()){drumEditor=false;drumKit=-1;}
         updateControllerStatus();
         updateJpLive();
@@ -416,14 +442,14 @@ final class StudioView extends LinearLayout {
         for(Knob knob:knobs){JSONObject p=knob.dataSource!=null?knob.dataSource.get():values.get(knob.id);if(p!=null)knob.update(p);}
         if(envelope!=null)envelope.invalidate();if(drumEnvelope!=null)drumEnvelope.invalidate();updateDrumScope();
         for(int i=0;i<levels.size();i++){JSONObject t=state.optJSONArray("tracks").optJSONObject(i);if(!levels.get(i).isPressed())levels.get(i).update(t.optInt("level"));mutes.get(i).setText(t.optInt("mute")==0?"MUTE":"MUTED");mutes.get(i).setTextColor(t.optInt("mute")==0?DIM:GREEN);mixerNames.get(i).setText((definition.tracks[i])+"\n"+(state.optInt("solo")!=0&&(state.optInt("solo")&(1<<i))==0?"SOLO EXCLUDED":Math.round(t.optInt("level")*100f/127)+"%"));}
-        if(grid!=null){if(jpConnected&&!Jp1Pads.plays(jpPadMode,keysOpen))bank=controllerStepWindow();bank=Math.min(bank,Math.max(0,(state.optInt("length")-1)/16));updateChordToolbar();grid.invalidate();if(octaveOverview!=null)octaveOverview.invalidate();}
+        if(grid!=null){grid.followPosition();bank=Math.min(bank,Math.max(0,(state.optInt("length")-1)/16));updateChordToolbar();grid.invalidate();if(octaveOverview!=null)octaveOverview.invalidate();}
         panels.refresh();keyboard.invalidate();
     }
     private void collect(JSONObject g,Map<Integer,JSONObject> values){JSONArray p=g.optJSONArray("params");for(int k=0;k<p.length();k++)values.put(p.optJSONObject(k).optInt("id"),p.optJSONObject(k));}
     private String signature(){return jpKnobPane+":"+jpKnobBank+":"+page+":"+selected+":"+(state==null?0:state.optInt("engine"))+":"+isDrum()+":"+(state==null?0:state.optInt("recordState"))+":"+(state!=null&&(page.equals("PANEL")||page.equals("JP LIVE"))?panelGroup().optInt("page"):0)+":"+(state!=null&&page.equals("PERFORM")?state.optInt("layer"):0)+":"+(state!=null&&page.equals("MIX")?state.optInt("solo")+":"+state.optInt("drumMute"):"")+":"+(state!=null&&page.equals("SONG")?state.optInt("songMode")+":"+state.optInt("songRecording")+":"+state.optInt("liveSection")+":"+state.optInt("queuedSection")+":"+state.optInt("songLoop")+":"+state.optJSONArray("arrangement").toString()+":"+state.optJSONArray("songLanes"):"");}
     void refreshWorkspace(){rebuild();}
     private void rebuild(){
-        for(Knob knob:knobs)knob.cancelGesture();panels.releasePads();hardware.pause();if(grid!=null)grid.removeCallbacks(grid.hold);content.removeAllViews();jpLiveHeading=null;jpLiveStatus=null;jpLivePads=null;setKeepScreenOn(page.equals("JP LIVE"));knobs.clear();jpAssignedKnobs.clear();levels.clear();mutes.clear();mixerNames.clear();grid=null;patternLabel=null;chordButton=null;octaveOverview=null;envelope=null;drumEnvelope=null;drumScope=null;structure=signature();for(Button b:tabButtons)b.setTextColor(page.equals(b.getTag())?GREEN:DIM);
+        for(Knob knob:knobs)knob.cancelGesture();panels.releasePads();hardware.pause();if(grid!=null)grid.removeCallbacks(grid.hold);content.removeAllViews();jpLiveHeading=null;jpLiveStatus=null;jpLivePads=null;setKeepScreenOn(page.equals("JP LIVE"));displayArea.setVisibility(page.equals("JP LIVE")?GONE:VISIBLE);requestLayout();knobs.clear();jpAssignedKnobs.clear();levels.clear();mutes.clear();mixerNames.clear();grid=null;patternLabel=null;chordButton=null;octaveOverview=null;envelope=null;drumEnvelope=null;drumScope=null;structure=signature();updateControllerStatus();for(Button b:tabButtons)b.setTextColor(page.equals(b.getTag())?GREEN:DIM);
         if(page.equals("MORE")){ScrollView scroll=new ScrollView(getContext());if(hardware.getParent()!=null)((android.view.ViewGroup)hardware.getParent()).removeView(hardware);scroll.addView(hardware, new ScrollView.LayoutParams(-1,dp(210)));content.addView(scroll);if(active)hardware.resume();return;}
         if(state==null)return;if(page.equals("STEPS")){buildSequencer();return;}
         if(page.equals("JP LIVE")||page.equals("PANEL")&&jpKnobPane){buildControllerPane();return;}
@@ -443,7 +469,16 @@ final class StudioView extends LinearLayout {
     private JSONObject jpRole(int slot){
         JSONObject p=new JSONObject();try{
             String[] labels={"SELECT","TRACK","PRESET","TEMPO"};JSONArray choices=new JSONArray();int value=0,min=0,max=0;
-            if(slot==0){choices.put("HOME");JSONArray groups=state.optJSONArray("groups");for(int i=0;i<groups.length();i++){JSONObject g=groups.optJSONObject(i);choices.put(g.optString("title"));if(g.optInt("page")==panelGroup().optInt("page"))value=i+1;}max=choices.length()-1;}
+            if(slot==0){
+                choices.put("HOME");JSONArray groups=state.optJSONArray("groups");JSONObject current=panelGroup();
+                StringBuilder context=new StringBuilder().append(jpKnobBank).append(':').append(selected).append(':').append(state.optInt("engine"));
+                for(int i=0;i<groups.length();i++){
+                    JSONObject g=groups.optJSONObject(i);choices.put(g.optString("title"));
+                    context.append('|').append(g.optInt("page")).append(':').append(g.optString("title"));
+                    if(g.optInt("page")==current.optInt("page")&&(g.optInt("page")!=-1||!panelVirtualTitle.isEmpty()&&panelVirtualTitle.equals(g.optString("title"))))value=i+1;
+                }
+                max=choices.length()-1;value=jpPageSelector.observe(value,choices.length(),context.toString(),android.os.SystemClock.uptimeMillis());
+            }
             else if(slot==1){for(String name:definition.tracks)choices.put(name);value=selected;max=trackCount-1;}
             else if(slot==2){choices=state.optJSONArray("presets");value=state.optInt("preset");max=Math.max(0,choices.length()-1);}
             else {value=state.optInt("bpm");min=40;max=240;}
@@ -480,7 +515,7 @@ final class StudioView extends LinearLayout {
         heading.addView(button(jpKnobBank==2?"STEPS":"PAGES",v->{if(jpKnobBank==1)chooseControllerSound();else if(jpKnobBank==2)openPage("STEPS");else chooseGroup();}),buttonSize(72,44));body.addView(heading);
         for(int rowIndex=0;rowIndex<2;rowIndex++){LinearLayout controls=row();controls.setBackground(tint(CARD));for(int col=0;col<4;col++){
             final int slot=rowIndex*4+col;Knob knob=null;
-            if(slot<4){knob=new Knob(jpRole(slot));knob.dataSource=()->jpRole(slot);knob.sendValue=n->{if(slot==0){JSONArray groups=state.optJSONArray("groups");selectGroup(n==0?-1:groups.optJSONObject(n-1).optInt("page"));}else if(slot==1)selectTrack(n);else if(slot==2)Native.event(Native.PRESET,selected,n);else Native.event(Native.GLOBAL,0,n);};
+            if(slot<4){knob=new Knob(jpRole(slot));if(slot==0)knob.pickup=jpPageSelector.pickup;knob.dataSource=()->jpRole(slot);knob.sendValue=n->{if(slot==0){selectGroupAt(n);}else if(slot==1)selectTrack(n);else if(slot==2)Native.event(Native.PRESET,selected,n);else Native.event(Native.GLOBAL,0,n);};
                 if(slot==2&&isDrum()){JSONArray groups=state.optJSONArray("groups");for(int i=0;i<groups.length();i++)if(groups.optJSONObject(i).optString("title").equals("KIT")){knob=new Knob(groups.optJSONObject(i).optJSONArray("params").optJSONObject(0));knob.label="PRESET";break;}}
             }else if(slot-4<fields.size())knob=new Knob(fields.get(slot-4));
             jpAssignedKnobs.add(knob);if(knob!=null){knobs.add(knob);knob.controllerSlot=slot;controls.addView(knob,weight(live?96:106));}else controls.addView(label("—",14,DIM),weight(106));
@@ -497,7 +532,7 @@ final class StudioView extends LinearLayout {
         private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
         JpLivePads(){super(StudioView.this.getContext());setContentDescription("JP-1 pad layout, left to right from top row to bottom row");}
         @Override protected void onDraw(Canvas canvas){
-            if(state==null)return;boolean plays=Jp1Pads.plays(jpPadMode,keysOpen);
+            if(state==null)return;boolean plays=controllerPadsPlay(jpPadMode);
             float w=getWidth()/4f,h=getHeight()/4f;paint.setTypeface(InstrumentStyle.font(getContext()));paint.setTextAlign(Paint.Align.CENTER);
             for(int pad=0;pad<16;pad++){
                 float x=(pad%4)*w,y=(pad/4)*h;int step=controllerStepWindow()*16+pad;
@@ -520,7 +555,9 @@ final class StudioView extends LinearLayout {
         int accepted=jpKnobFilters[index].accept(raw,android.os.SystemClock.uptimeMillis());
         int next=ControllerValue.absolute(accepted,knob.min,knob.max,knob.discrete()&&knob.choiceValues!=null?knob.choiceValues.length():0);
         if(knob.discrete()&&knob.choiceValues!=null)next=knob.choiceValues.optInt(next);
-        boolean caught=knob.pickup.accept(next,knob.value);knob.invalidate();if(!caught||next==knob.value)return;
+        // Page and track selection are navigation: rebuilding after a track change
+        // must not create pickup dead zones. Sound, preset and tempo retain pickup.
+        boolean caught=knob.pickup.accept(next,slot<2?next:knob.value);knob.invalidate();if(!caught||next==knob.value)return;
         Native.event(Native.ACTION,selected*256+52,0);knob.sendController(next);Native.event(Native.ACTION,selected*256+53,0);
     }
     void controllerAssignedKnob(int slot,int delta){
@@ -620,7 +657,7 @@ final class StudioView extends LinearLayout {
     private void stampChord(int step){
         String error=chordPlacementError(step);if(error!=null){Toast.makeText(getContext(),error,Toast.LENGTH_LONG).show();return;}
         ChordPlacement chord=chordStamp;panels.action(52,0);try{for(int pitch:chord.notes())Native.event(Native.STEP,selected*state.optInt("stepStride",8192)+step*128+pitch,1);panels.detail(step,0,5,chord.length);}finally{panels.action(53,0);}
-        cancelChordStamp();if(grid!=null){grid.lastStampStep=step;grid.stampFlashUntil=android.os.SystemClock.uptimeMillis()+650;grid.invalidate();grid.postInvalidateDelayed(700);}Toast.makeText(getContext(),chord.name+" placed at step "+(step+1),Toast.LENGTH_SHORT).show();
+        cancelChordStamp();focusStep(step,chord.notes()[0]);if(grid!=null){grid.lastStampStep=step;grid.stampFlashUntil=android.os.SystemClock.uptimeMillis()+650;grid.invalidate();grid.postInvalidateDelayed(700);}Toast.makeText(getContext(),chord.name+" placed at step "+(step+1),Toast.LENGTH_SHORT).show();
     }
     /** Three stacked piano-roll notes and a plus, rendered on a crisp 12x12 pixel grid. */
     final class ChordIcon extends android.graphics.drawable.Drawable {
@@ -719,7 +756,7 @@ final class StudioView extends LinearLayout {
     private boolean inside(View child,View ancestor){for(android.view.ViewParent parent=child.getParent();parent instanceof View;parent=parent.getParent())if(parent==ancestor)return true;return false;}
     Knob instrumentKnob(JSONObject data){Knob k=new Knob(data);knobs.add(k);return k;}
     void controllerPage(int direction){if(state!=null&&state.optInt("recordState")!=3)walkGroup(direction);}
-    void showHome(){selectGroup(-1);}
+    void showHome(){selectGroupAt(0);}
     void controllerKnob(int index,int delta){
         ArrayList<Knob> visible=new ArrayList<>();Rect rect=new Rect();
         for(Knob knob:knobs){if(sheet!=null&&!inside(knob,sheet.getWindow().getDecorView()))continue;if(!knob.isShown()||!knob.getGlobalVisibleRect(rect))continue;int[] position=new int[2];knob.getLocationOnScreen(position);if(!rect.contains(position[0]+knob.getWidth()/2,position[1]+knob.getHeight()*57/130))continue;visible.add(knob);}
@@ -732,9 +769,9 @@ final class StudioView extends LinearLayout {
     void controllerNote(int target,int velocity){int track=target/128,note=target%128;if(track>=0&&track<controllerNotes.length&&note>=0&&note<128){controllerNotes[track][note]=Math.max(0,controllerNotes[track][note]+(velocity>0?1:-1));if(track==selected&&!isDrum()){if(velocity>0&&keysOpen)keyboard.followPiano(note);else if(velocity==0)keyboard.schedulePianoRestore();}keyboard.invalidate();controllerFeedback(false);}}
     void clearControllerNotes(){for(int[] notes:controllerNotes)Arrays.fill(notes,0);keyboard.invalidate();}
     final class Knob extends View {
-        final ControllerValue.Pickup pickup=new ControllerValue.Pickup();
+        ControllerValue.Pickup pickup=new ControllerValue.Pickup();
         int controllerSlot=-1;long controllerActiveUntil;
-        String controllerHint(){int direction=pickup.direction(value);return pickup.waiting()?(direction>0?"↑ PICKUP":direction<0?"↓ PICKUP":"PICKUP"):"";}
+        String controllerHint(){if(controllerSlot==0||controllerSlot==1)return "";int direction=pickup.direction(value);return pickup.waiting()?(direction>0?"↑ PICKUP":direction<0?"↓ PICKUP":"PICKUP"):"";}
         final ControllerValue.Pending controllerPending=new ControllerValue.Pending();
         final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);int id,value,min,max;String label,text;JSONArray choices,choiceValues;boolean dragging;int startValue;
         final KnobGesture gesture=new KnobGesture(ViewConfiguration.get(getContext()).getScaledTouchSlop(),ViewConfiguration.get(getContext()).getScaledDoubleTapSlop(),ViewConfiguration.getDoubleTapTimeout());
@@ -742,7 +779,7 @@ final class StudioView extends LinearLayout {
         final Runnable scrollHold=()->{if(gesture.hold(android.os.SystemClock.uptimeMillis())){getParentDisallow(false);describe();invalidate();}};
         Knob(JSONObject data){super(StudioView.this.getContext());setFocusable(true);setClickable(true);update(data);}
         void describe(){setContentDescription(label+", "+text+(gesture.isScrolling()?". Scroll ready. Drag to scroll.":". Drag the dial or value box to adjust. Swipe labels or surrounding space to scroll, or hold the control still for 300 milliseconds before scrolling. Double-tap for exact entry."));}
-        void update(JSONObject data){if(dragging||gesture.capturesDrag())return;if(!controllerPending.accepts(data.optInt("value"),android.os.SystemClock.uptimeMillis()))return;if(value!=data.optInt("value"))pickup.rearm();id=data.optInt("id");value=data.optInt("value");min=data.optInt("min");max=data.optInt("max");label=definition.label(data.optString("label"));text=data.optString("text");choices=data.optJSONArray("choices");choiceValues=data.optJSONArray("choiceValues");describe();invalidate();}
+        void update(JSONObject data){if(dragging||gesture.capturesDrag())return;if(!controllerPending.accepts(data.optInt("value"),android.os.SystemClock.uptimeMillis()))return;if(value!=data.optInt("value")||id!=data.optInt("id")||min!=data.optInt("min")||max!=data.optInt("max"))pickup.rearm();id=data.optInt("id");value=data.optInt("value");min=data.optInt("min");max=data.optInt("max");label=definition.label(data.optString("label"));text=data.optString("text");choices=data.optJSONArray("choices");choiceValues=data.optJSONArray("choiceValues");describe();invalidate();}
         void send(int n){pickup.rearm();value=Math.max(min,Math.min(max,n));text=Integer.toString(value);if(sendValue!=null)sendValue.accept(value);else Native.event(id>=Native.GLOBAL_BASE?Native.GLOBAL:Native.PARAM,id>=Native.GLOBAL_BASE?id-Native.GLOBAL_BASE:id,value);describe();invalidate();if(envelope!=null)envelope.invalidate();if(drumEnvelope!=null)drumEnvelope.invalidate();}
         void sendController(int n){controllerActiveUntil=android.os.SystemClock.uptimeMillis()+600;String formatted=text;send(n);pickup.accept(value,value);text=formatted;controllerPending.sent(value,android.os.SystemClock.uptimeMillis());describe();invalidate();}
         void cancelGesture(){removeCallbacks(scrollHold);if(dragging)Native.event(Native.ACTION,selected*256+53,0);dragging=false;gesture.cancel();getParentDisallow(false);describe();invalidate();}
@@ -757,7 +794,7 @@ final class StudioView extends LinearLayout {
             int saved=c.save();if(controllerSlot>=0&&android.os.SystemClock.uptimeMillis()<controllerActiveUntil){c.scale(1.06f,1.06f,getWidth()/2f,getHeight()/2f);postInvalidateDelayed(600);}c.scale(1,getHeight()/(float)dp(130));
             float x=getWidth()/2f,y=dp(57),r=dialRadius();
             if(gesture.isScrolling()){p.setShader(new RadialGradient(x,y,r+dp(22),new int[]{0x6065bdea,0x2065bdea,0x0065bdea},new float[]{0,.65f,1},Shader.TileMode.CLAMP));c.drawCircle(x,y,r+dp(22),p);p.setShader(null);p.setColor(0x2265bdea);c.drawRoundRect(dp(2),dp(28),getWidth()-dp(2),dp(113),dp(8),dp(8),p);}
-            p.setTextAlign(Paint.Align.CENTER);p.setTypeface(InstrumentStyle.font(getContext()));p.setTextSize(dp(14));while(p.measureText((controllerSlot<0?label:(new String[]{"1L","1R","2L","2R","3L","3R","4L","4R"}[controllerSlot]+" · "+label)).toUpperCase(Locale.ROOT))>getWidth()-dp(8)&&p.getTextSize()>dp(9))p.setTextSize(p.getTextSize()-1);p.setColor(gesture.isScrolling()?GREEN:DIM);c.drawText((controllerSlot<0?label:(new String[]{"1L","1R","2L","2R","3L","3R","4L","4R"}[controllerSlot]+" · "+label)).toUpperCase(Locale.ROOT),x,dp(19),p);
+            p.setTextAlign(Paint.Align.CENTER);p.setTypeface(InstrumentStyle.font(getContext()));p.setTextSize(dp(14));while(p.measureText((controllerSlot<0?label:(JP_KNOB_POSITIONS[controllerSlot]+" · "+label)).toUpperCase(Locale.ROOT))>getWidth()-dp(8)&&p.getTextSize()>dp(9))p.setTextSize(p.getTextSize()-1);p.setColor(gesture.isScrolling()?GREEN:DIM);c.drawText((controllerSlot<0?label:(JP_KNOB_POSITIONS[controllerSlot]+" · "+label)).toUpperCase(Locale.ROOT),x,dp(19),p);
             if(discrete()){
                 p.setColor(0xff111915);c.drawRoundRect(dp(5),dp(35),getWidth()-dp(5),dp(84),dp(6),dp(6),p);
                 p.setColor(GREEN);p.setTextSize(dp(16));while(p.measureText(text)>getWidth()-dp(14)&&p.getTextSize()>dp(10))p.setTextSize(p.getTextSize()-1);c.drawText(text.toUpperCase(Locale.ROOT),x,dp(64),p);
@@ -826,6 +863,39 @@ final class StudioView extends LinearLayout {
         int scrollX(){return horizontal==null?0:horizontal.getScrollX();}
         int scrollY(){return vertical==null?0:vertical.getScrollY();}
         boolean inCells(float x,float y){return x>=scrollX()+left&&y>=scrollY()+top;}
+        int followedPosition=-1,lastPadWindow=-1;boolean touching;
+        void focusStep(int step,int note){
+            followedPosition=state.optInt("position",-1);lastPadWindow=controllerStepWindow();
+            revealStep(step,note);
+            // A hardware edit may have just opened STEPS, before its first layout.
+            post(()->{if(grid==this)revealStep(step,note);});
+        }
+        void followPosition(){
+            if(state.optInt("playing")==0){
+                followedPosition=-1;
+                if(jpConnected&&!controllerPadsPlay(jpPadMode)){
+                    int window=controllerStepWindow();if(window!=lastPadWindow){bank=window;lastPadWindow=window;}
+                }
+                return;
+            }
+            int position=state.optInt("position",-1);
+            if(touching||sheet!=null||position<0||position==followedPosition||getWidth()==0)return;
+            followedPosition=position;revealStep(position,-1);
+        }
+        void revealStep(int step,int pitch){
+            if(state==null||step<0||step>=state.optInt("length"))return;
+            bank=step/16;
+            int row=-1;
+            if(pitch>=0){if(isDrum())row=Math.min(lanes()-1,pitch);else {octave=Math.min(127,pitch)/12;row=11-pitch%12;}}
+            updateChordToolbar();if(octaveOverview!=null)octaveOverview.invalidate();
+            if(horizontal!=null&&getWidth()>left){
+                float cw=(getWidth()-left)/16f;int col=step%16;
+                horizontal.scrollTo(StepViewport.reveal(scrollX(),horizontal.getWidth(),left,(int)Math.floor(left+col*cw),(int)Math.ceil(left+(col+1)*cw),getWidth()),0);
+            }
+            if(row>=0&&vertical!=null)vertical.scrollTo(0,StepViewport.reveal(scrollY(),vertical.getHeight(),top,top+row*cell,top+(row+1)*cell,getHeight()));
+            invalidate();
+        }
+
         final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);float downX,downY;final int widthCell=dp(30),cell=dp(24),left=dp(68),top=dp(28);boolean moved;long downTime;int dragStep=-1,dragNote;boolean resizeDrag,held;
         final Runnable hold=()->{if(!moved){int col=(int)((downX-left)/((getWidth()-left)/16f)),r=(int)((downY-top)/cell),step=bank*16+col;if(inCells(downX,downY)&&col>=0&&col<16&&r>=0&&r<(isDrum()?lanes():12)&&step<state.optInt("length")){if(note(r)>127)return;held=true;int owner=step;while(!isDrum()&&owner>0&&state.optJSONArray("detail").optJSONObject(owner).optInt("time")==1)owner--;panels.step(owner,note(r));}}};
         Grid(Context c){super(c);setContentDescription(isDrum()?"Drum sequencer. Tap cells to toggle hits.":"Piano roll. Separate blocks mark new note attacks; continuous bars mark held notes. Tap cells to add or remove notes; up to four per step.");}
@@ -875,7 +945,7 @@ final class StudioView extends LinearLayout {
         }
         int stampStep(float x,float y){float cw=(getWidth()-left)/16f;int col=(int)((x-left)/cw),row=(int)((y-top)/cell);boolean header=y>=scrollY()&&y<scrollY()+top,cells=inCells(x,y)&&row>=0&&row<(isDrum()?lanes():12);if(x<scrollX()+left||col<0||col>=16||(!header&&!cells))return -1;int step=bank*16+col;return step<state.optInt("length")?step:-1;}
         @Override public boolean onTouchEvent(MotionEvent e){
-            if(!active)return false;int action=e.getActionMasked();float cw=(getWidth()-left)/16f;
+            if(!active)return false;int action=e.getActionMasked();if(action==MotionEvent.ACTION_DOWN)touching=true;else if(action==MotionEvent.ACTION_UP||action==MotionEvent.ACTION_CANCEL)touching=false;float cw=(getWidth()-left)/16f;
             if(action==MotionEvent.ACTION_DOWN&&chordStamp!=null){stampingGesture=true;downX=e.getX();downY=e.getY();moved=false;removeCallbacks(hold);stampPreviewStep=stampStep(downX,downY);invalidate();return true;}
             if(stampingGesture){
                 if(action==MotionEvent.ACTION_MOVE&&(Math.abs(e.getX()-downX)>dp(8)||Math.abs(e.getY()-downY)>dp(8))){moved=true;stampPreviewStep=-1;invalidate();}
@@ -889,15 +959,15 @@ final class StudioView extends LinearLayout {
             if(action==MotionEvent.ACTION_MOVE){if(Math.abs(e.getX()-downX)>dp(8)||Math.abs(e.getY()-downY)>dp(8)){moved=true;removeCallbacks(hold);}return true;}
             if(action==MotionEvent.ACTION_CANCEL){removeCallbacks(hold);dragStep=-1;getParent().requestDisallowInterceptTouchEvent(false);return true;}
             if(action==MotionEvent.ACTION_UP){removeCallbacks(hold);if(held){dragStep=-1;getParent().requestDisallowInterceptTouchEvent(false);return true;}getParent().requestDisallowInterceptTouchEvent(false);
-                if(moved&&dragStep>=0){int col=Math.max(0,Math.min(15,(int)((e.getX()-left)/cw))),step=bank*16+col;
+                if(moved&&dragStep>=0){int focusNote=dragNote;int col=Math.max(0,Math.min(15,(int)((e.getX()-left)/cw))),step=bank*16+col;
                     if(resizeDrag)panels.detail(dragStep,0,5,Math.max(1,Math.min(state.optInt("length")-dragStep,step-dragStep+1)));
-                    else{int row=Math.max(0,Math.min(11,(int)((e.getY()-top)/cell)));panels.detail(dragStep,0,9,step*128+Math.max(0,Math.min(127,note(row)-dragNote+64)));}dragStep=-1;performClick();return true;}
+                    else{int row=Math.max(0,Math.min(11,(int)((e.getY()-top)/cell)));focusNote=note(row);panels.detail(dragStep,0,9,step*128+Math.max(0,Math.min(127,note(row)-dragNote+64)));}focusStep(step,focusNote);dragStep=-1;performClick();return true;}
                 if(!moved){int col=(int)((e.getX()-left)/cw),r=(int)((e.getY()-top)/cell),step=bank*16+col;
                     if(inCells(e.getX(),e.getY())&&col>=0&&col<16&&r>=0&&r<(isDrum()?lanes():12)&&step<state.optInt("length")){int n=note(r);if(n>127)return true;boolean enabled=on(step,n);JSONArray notes=state.optJSONArray("steps").optJSONArray(step);
                         if(e.getEventTime()-downTime>=500)panels.step(step,n);
                         else if(!enabled&&!isDrum()&&notes.optInt(3)>=0)Toast.makeText(getContext(),"Four notes per step — remove one first",Toast.LENGTH_SHORT).show();
                         else if(enabled){int owner=step;while(!isDrum()&&owner>0&&state.optJSONArray("detail").optJSONObject(owner).optInt("time")==1)owner--;Native.event(Native.STEP,selected*state.optInt("stepStride",8192)+owner*128+n,0);}
-                        else Native.event(Native.STEP,selected*state.optInt("stepStride",8192)+step*128+n,1);performClick();}}
+                        else Native.event(Native.STEP,selected*state.optInt("stepStride",8192)+step*128+n,1);focusStep(step,n);performClick();}}
                 dragStep=-1;return true;}
             return true;
         }

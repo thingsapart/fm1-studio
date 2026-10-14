@@ -101,7 +101,7 @@ public final class MainActivity extends Activity {
         if(instrument.state==null)return -1;
         int pad=Jp1Pads.lane(note,middleBase),sourceBank=Jp1Pads.bank(note,middleBase);
         if(sourceBank>=0&&!controllerBankLive){controllerPadObservedAt=SystemClock.uptimeMillis();if(controllerPadBank!=sourceBank)getSharedPreferences("jp1",0).edit().putInt("lastPadBank",sourceBank).apply();controllerPadBank=sourceBank;controllerPadBase=middleBase;}
-        boolean plays=Jp1Pads.plays(controllerPadMode,instrument.controllerKeysVisible());
+        boolean plays=instrument.controllerPadsPlay(controllerPadMode);
         instrument.controllerPadStatus(controllerPadMode,controllerPadBank,controllerPadOctave);
         if(!plays){int step=pad<0?-1:instrument.controllerStepWindow()*16+pad;if(step>=0)instrument.controllerStep(step);return -1;}
         boolean drum=instrument.isDrum();int shift=Jp1Pads.octaveControl(pad,true,drum);
@@ -111,7 +111,7 @@ public final class MainActivity extends Activity {
         else instrument.controllerSound(-1,pitch);
         return instrument.selected*128+pitch;
     }
-    void controllerPadSettings(){new AlertDialog.Builder(this).setTitle("JP-1 pad mode").setSingleChoiceItems(new String[]{"Auto · notes with keyboard shown, steps when hidden","Play · notes / drum sounds","Steps · toggle the selected sound's pattern"},controllerPadMode,(dialog,n)->{controllerPadMode=n;getSharedPreferences("jp1",0).edit().putInt("padMode",n).apply();controllerPadModeChanged();dialog.dismiss();}).show();}
+    void controllerPadSettings(){new AlertDialog.Builder(this).setTitle("JP-1 pad mode").setSingleChoiceItems(new String[]{"Auto · play kit overview / keyboard; steps elsewhere","Play · notes / drum sounds","Steps · toggle the selected sound's pattern"},controllerPadMode,(dialog,n)->{controllerPadMode=n;getSharedPreferences("jp1",0).edit().putInt("padMode",n).apply();controllerPadModeChanged();dialog.dismiss();}).show();}
     void controllerAbsoluteKnob(int knob,int value){if(controllerBankLive)knob=controllerLiveKnobBank*8+knob%8;instrument.controllerAbsoluteKnob(knob,value);}
     void controllerKnob(int knob,int delta){
         if(!instrument.controllerKnobsReady())return;

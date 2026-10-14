@@ -10,6 +10,10 @@ public final class Jp1PadsTest {
         check(Jp1Pads.lane(35,52)==-1&&Jp1Pads.lane(84,52)==-1);
         check(Jp1Pads.plays(Jp1Pads.AUTO,true)&&!Jp1Pads.plays(Jp1Pads.AUTO,false));
         check(Jp1Pads.plays(Jp1Pads.PLAY,false)&&!Jp1Pads.plays(Jp1Pads.STEPS,true));
+        check(Jp1Pads.plays(Jp1Pads.AUTO,false,true));
+        check(!Jp1Pads.plays(Jp1Pads.AUTO,false,false));
+        check(!Jp1Pads.plays(Jp1Pads.STEPS,false,true));
+        check(Jp1Pads.plays(Jp1Pads.PLAY,false,false));
         check(Jp1Pads.octaveControl(12,true,false)==-1&&Jp1Pads.octaveControl(3,true,false)==1);
         check(Jp1Pads.octaveControl(12,true,true)==0&&Jp1Pads.octaveControl(3,false,false)==0);
         check(Jp1Pads.pitch(52,-1)==40&&Jp1Pads.pitch(68,-1)==56&&Jp1Pads.pitch(36,-1)==24);

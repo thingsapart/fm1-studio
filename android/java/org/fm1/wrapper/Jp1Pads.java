@@ -4,7 +4,8 @@ package org.fm1.wrapper;
 /** Physical reading order is shared by all three note banks. */
 final class Jp1Pads {
     static final int AUTO=0,PLAY=1,STEPS=2;
-    static boolean plays(int mode,boolean keyboardVisible){return mode==PLAY||(mode==AUTO&&keyboardVisible);}
+    static boolean plays(int mode,boolean keyboardVisible){return plays(mode,keyboardVisible,false);}
+    static boolean plays(int mode,boolean keyboardVisible,boolean kitOverview){return mode==PLAY||(mode==AUTO&&(keyboardVisible||kitOverview));}
     static int bank(int note,int middleBase){int delta=note-middleBase;return delta>=0&&delta<16?0:delta>=16&&delta<32?1:delta>=-16&&delta<0?2:-1;}
     static int lane(int note,int middleBase){if(bank(note,middleBase)<0)return -1;int pad=Math.floorMod(note-middleBase,16);return (3-pad/4)*4+pad%4;}
     static int step(int note,int middleBase){int bank=bank(note,middleBase);return bank<0?-1:bank*16+lane(note,middleBase);}

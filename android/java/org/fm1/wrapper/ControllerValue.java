@@ -26,7 +26,27 @@ final class ControllerValue {
     }
     static final class Pending {
         private int value;private long until;
+        void clear(){until=0;}
         void sent(int value,long now){this.value=value;until=now+250;}
         boolean accepts(int observed,long now){return now>=until||observed==value;}
+    }
+    /** Navigation survives rebuilding its View and the delayed native page echo. */
+    static final class Selector {
+        final Pickup pickup=new Pickup();
+        private final Pending pending=new Pending();
+        private String context;
+        private int value,count;
+        void reset(){context=null;pending.clear();pickup.rearm();}
+        int observe(int observed,int count,String context,long now){
+            if(count<1)throw new IllegalArgumentException("Empty selector");
+            observed=Math.max(0,Math.min(count-1,observed));
+            if(!context.equals(this.context)||count!=this.count){
+                reset();this.context=context;this.count=count;value=observed;
+            }else if(observed!=value&&pending.accepts(observed,now)){
+                value=observed;pickup.rearm();
+            }
+            return value;
+        }
+        void sent(int next,long now){value=Math.max(0,Math.min(count-1,next));pending.sent(value,now);}
     }
 }
