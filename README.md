@@ -132,3 +132,5 @@ Project code is **GPL-3.0-only** ([LICENSE](LICENSE)); third-party components an
 assets retain their own terms. See [credits and licenses](LICENSING.md) for
 component authors and applicable code, font and asset terms.
 Binary releases must include applicable notices and complete corresponding source.
+
+You can also try FM-1 Studio in the browser, no flashing needed, in the free community [FM-1 Emulator](https://fm1-emulator.atst.tools/).
